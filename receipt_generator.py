@@ -69,7 +69,7 @@ class ReceiptGenerator:
         Generates a payment receipt (Απόδειξη Πληρωμής)
         """
         if payment_date is None:
-            payment_date = datetime.now().strftime("%d/%m/%Y")
+            payment_date = datetime.now().strftime("%d/%m/%y")
 
         c = canvas.Canvas(output_path, pagesize=A4)
         width, height = A4
@@ -198,7 +198,7 @@ class ReceiptGenerator:
         Generates a collection receipt (Απόδειξη Είσπραξης)
         """
         if collection_date is None:
-            collection_date = datetime.now().strftime("%d/%m/%Y")
+            collection_date = datetime.now().strftime("%d/%m/%y")
 
         c = canvas.Canvas(output_path, pagesize=A4)
         width, height = A4
