@@ -128,12 +128,12 @@ def connect_db():
         pass
 
     try:
-        cursor.execute("ALTER TABLE customers ADD COLUMN created_date TEXT DEFAULT CURRENT_TIMESTAMP")
+        cursor.execute("ALTER TABLE customers ADD COLUMN created_date TEXT")
     except sqlite3.OperationalError:
         pass
 
     try:
-        cursor.execute("ALTER TABLE transactions ADD COLUMN created_at TEXT DEFAULT CURRENT_TIMESTAMP")
+        cursor.execute("ALTER TABLE transactions ADD COLUMN created_at TEXT")
     except sqlite3.OperationalError:
         pass
 
