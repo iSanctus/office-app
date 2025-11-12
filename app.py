@@ -52,7 +52,7 @@ class EditTransactionWindow(ctk.CTkToplevel):
         self.status_menu = ctk.CTkOptionMenu(
             main_frame,
             variable=self.status_var,
-            values=["Εκκρεμεί", "Πληρώθηκε", "Καθυστέρηση"]
+            values=["Εκκρεμεί", "Πληρώθηκε"]
         )
         self.status_menu.pack(fill="x", pady=(0, 10))
 
@@ -392,20 +392,25 @@ class CustomerProfileWindow(ctk.CTkToplevel):
         amount_str = self.trans_tree.item(selected[0])['values'][3]
         amount = float(amount_str.replace(' €', '').replace(',', '.'))
 
+        # Get transaction notes from database
+        trans_details = db.get_transaction_details(trans_id)
+        trans_notes = trans_details[1] if trans_details else ""
+
         # Show receipt options dialog
-        ReceiptOptionsWindow(self, trans_id, self.customer_name, service, amount, date)
+        ReceiptOptionsWindow(self, trans_id, self.customer_name, service, amount, date, trans_notes)
 
 
 class ReceiptOptionsWindow(ctk.CTkToplevel):
     """Receipt generation options window"""
 
-    def __init__(self, master, trans_id, customer_name, service, amount, date):
+    def __init__(self, master, trans_id, customer_name, service, amount, date, transaction_notes=""):
         super().__init__(master)
         self.trans_id = trans_id
         self.customer_name = customer_name
         self.service = service
         self.amount = amount
         self.date = date
+        self.transaction_notes = transaction_notes
 
         self.title("Δημιουργία Απόδειξης")
         self.geometry("600x700")
@@ -524,6 +529,16 @@ class ReceiptOptionsWindow(ctk.CTkToplevel):
         )
         save_settings_check.pack(padx=15, pady=(0, 15), anchor="w")
 
+        # Custom Notes Section
+        notes_frame = ctk.CTkFrame(main_frame)
+        notes_frame.pack(fill="x", pady=(0, 15))
+
+        notes_title = ctk.CTkLabel(notes_frame, text="💬 Σχόλια Απόδειξης (προαιρετικό):", font=ctk.CTkFont(weight="bold", size=14))
+        notes_title.pack(pady=(15, 10), padx=15, anchor="w")
+
+        self.receipt_notes_textbox = ctk.CTkTextbox(notes_frame, height=100)
+        self.receipt_notes_textbox.pack(fill="x", padx=15, pady=(0, 15))
+
         # Generate Button
         generate_btn = ctk.CTkButton(
             main_frame,
@@ -612,6 +627,9 @@ class ReceiptOptionsWindow(ctk.CTkToplevel):
             signature_path=self.signature_path.get() if self.signature_path.get() else None
         )
 
+        # Get custom notes from textbox
+        custom_notes = self.receipt_notes_textbox.get("1.0", "end-1c").strip()
+
         try:
             if self.receipt_type.get() == "payment":
                 generator.generate_payment_receipt(
@@ -620,7 +638,9 @@ class ReceiptOptionsWindow(ctk.CTkToplevel):
                     self.customer_name,
                     self.amount,
                     self.service,
-                    payment_date=self.date
+                    payment_date=self.date,
+                    notes=self.transaction_notes,
+                    custom_notes=custom_notes
                 )
             else:
                 generator.generate_collection_receipt(
@@ -629,7 +649,9 @@ class ReceiptOptionsWindow(ctk.CTkToplevel):
                     self.customer_name,
                     self.amount,
                     self.service,
-                    collection_date=self.date
+                    collection_date=self.date,
+                    notes=self.transaction_notes,
+                    custom_notes=custom_notes
                 )
 
             messagebox.showinfo("Επιτυχία", f"Η απόδειξη δημιουργήθηκε επιτυχώς!\n\n{output_path}", parent=self)
@@ -748,7 +770,7 @@ class App(ctk.CTk):
         self.status_menu = ctk.CTkOptionMenu(
             left_panel,
             variable=self.status_var,
-            values=["Εκκρεμεί", "Πληρώθηκε", "Καθυστέρηση"],
+            values=["Εκκρεμεί", "Πληρώθηκε"],
             height=40
         )
         self.status_menu.pack(fill="x", padx=20, pady=(0, 15))
@@ -808,7 +830,7 @@ class App(ctk.CTk):
         filter_menu = ctk.CTkOptionMenu(
             filter_frame,
             variable=self.filter_var,
-            values=["Όλα", "Εκκρεμεί", "Πληρώθηκε", "Καθυστέρηση"],
+            values=["Όλα", "Εκκρεμεί", "Πληρώθηκε"],
             command=self.refresh_main_table,
             width=150
         )
@@ -1442,7 +1464,7 @@ class App(ctk.CTk):
                     cost_pre_vat_float = cost_final_float / 1.24
 
                     # Validate status
-                    valid_statuses = ["Εκκρεμεί", "Πληρώθηκε", "Καθυστέρηση"]
+                    valid_statuses = ["Εκκρεμεί", "Πληρώθηκε"]
                     if status not in valid_statuses:
                         raise ValueError(f"Κατάσταση '{status}' μη έγκυρη")
 
