@@ -178,8 +178,8 @@ class EditTransactionWindow(ctk.CTkToplevel):
         # Get transaction details
         _id, current_notes, current_status = db.get_transaction_details(self.transaction_id)
 
-        # Main container
-        main_frame = ctk.CTkFrame(self)
+        # Main container - Scrollable
+        main_frame = ctk.CTkScrollableFrame(self)
         main_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
         # Title
