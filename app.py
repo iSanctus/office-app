@@ -539,20 +539,25 @@ class CustomerProfileWindow(ctk.CTkToplevel):
         amount_str = self.trans_tree.item(selected[0])['values'][3]
         amount = float(amount_str.replace(' €', '').replace(',', '.'))
 
+        # Get transaction notes from database
+        trans_details = db.get_transaction_details(trans_id)
+        trans_notes = trans_details[1] if trans_details else ""
+
         # Show receipt options dialog
-        ReceiptOptionsWindow(self, trans_id, self.customer_name, service, amount, date_formatted)
+        ReceiptOptionsWindow(self, trans_id, self.customer_name, service, amount, date, trans_notes)
 
 
 class ReceiptOptionsWindow(ctk.CTkToplevel):
     """Receipt generation options window"""
 
-    def __init__(self, master, trans_id, customer_name, service, amount, date):
+    def __init__(self, master, trans_id, customer_name, service, amount, date, transaction_notes=""):
         super().__init__(master)
         self.trans_id = trans_id
         self.customer_name = customer_name
         self.service = service
         self.amount = amount
         self.date = date
+        self.transaction_notes = transaction_notes
 
         self.title("Δημιουργία Απόδειξης")
         self.geometry("600x700")
@@ -671,15 +676,15 @@ class ReceiptOptionsWindow(ctk.CTkToplevel):
         )
         save_settings_check.pack(padx=15, pady=(0, 15), anchor="w")
 
-        # Comments Section
-        comments_frame = ctk.CTkFrame(main_frame)
-        comments_frame.pack(fill="x", pady=(0, 15))
+        # Custom Notes Section
+        notes_frame = ctk.CTkFrame(main_frame)
+        notes_frame.pack(fill="x", pady=(0, 15))
 
-        comments_label = ctk.CTkLabel(comments_frame, text="💬 Σχόλια για την Απόδειξη:", font=ctk.CTkFont(weight="bold", size=14))
-        comments_label.pack(pady=(15, 10), padx=15, anchor="w")
+        notes_title = ctk.CTkLabel(notes_frame, text="💬 Σχόλια Απόδειξης (προαιρετικό):", font=ctk.CTkFont(weight="bold", size=14))
+        notes_title.pack(pady=(15, 10), padx=15, anchor="w")
 
-        self.receipt_comments_textbox = ctk.CTkTextbox(comments_frame, height=80)
-        self.receipt_comments_textbox.pack(fill="x", padx=15, pady=(0, 15))
+        self.receipt_notes_textbox = ctk.CTkTextbox(notes_frame, height=100)
+        self.receipt_notes_textbox.pack(fill="x", padx=15, pady=(0, 15))
 
         # Generate Button
         generate_btn = ctk.CTkButton(
@@ -772,6 +777,9 @@ class ReceiptOptionsWindow(ctk.CTkToplevel):
             signature_path=self.signature_path.get() if self.signature_path.get() else None
         )
 
+        # Get custom notes from textbox
+        custom_notes = self.receipt_notes_textbox.get("1.0", "end-1c").strip()
+
         try:
             if self.receipt_type.get() == "payment":
                 generator.generate_payment_receipt(
@@ -781,7 +789,8 @@ class ReceiptOptionsWindow(ctk.CTkToplevel):
                     self.amount,
                     self.service,
                     payment_date=self.date,
-                    notes=receipt_comments
+                    notes=self.transaction_notes,
+                    custom_notes=custom_notes
                 )
             else:
                 generator.generate_collection_receipt(
@@ -791,7 +800,8 @@ class ReceiptOptionsWindow(ctk.CTkToplevel):
                     self.amount,
                     self.service,
                     collection_date=self.date,
-                    notes=receipt_comments
+                    notes=self.transaction_notes,
+                    custom_notes=custom_notes
                 )
 
             messagebox.showinfo("Επιτυχία", f"Η απόδειξη δημιουργήθηκε επιτυχώς!\n\n{output_path}", parent=self)
