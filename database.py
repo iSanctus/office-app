@@ -72,6 +72,31 @@ def connect_db():
         timestamp TEXT DEFAULT CURRENT_TIMESTAMP
     )""")
 
+    # Table for Attachments (multiple per transaction)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS attachments (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        transaction_id INTEGER NOT NULL,
+        file_name TEXT NOT NULL,
+        file_path TEXT NOT NULL,
+        file_type TEXT,
+        uploaded_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (transaction_id) REFERENCES transactions (id) ON DELETE CASCADE
+    )""")
+
+    # Table for Issued Receipts (tracking)
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS issued_receipts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        transaction_id INTEGER NOT NULL,
+        receipt_type TEXT NOT NULL,
+        receipt_number TEXT,
+        file_path TEXT NOT NULL,
+        issued_at TEXT DEFAULT CURRENT_TIMESTAMP,
+        issued_by TEXT,
+        FOREIGN KEY (transaction_id) REFERENCES transactions (id) ON DELETE CASCADE
+    )""")
+
     # Table for Company Settings
     cursor.execute("""
     CREATE TABLE IF NOT EXISTS company_settings (
@@ -202,7 +227,9 @@ def add_transaction(customer_id, service_id, notes, date, cost_pre, cost_final, 
     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """, (customer_id, service_id, notes, date, cost_pre, cost_final, status, attachment))
     conn.commit()
+    transaction_id = cursor.lastrowid
     conn.close()
+    return transaction_id
 
 def get_all_transactions(filter_status="Όλα"):
     conn = connect_db()
@@ -312,6 +339,134 @@ def delete_transaction(transaction_id):
         add_audit_log("DELETE", "transactions", transaction_id,
                       f"Διαγραφή συναλλαγής #{transaction_id}",
                       f"Πελάτης: {details[0]}, Υπηρεσία: {details[1]}, Ποσό: {details[2]}€, Ημ/νία: {details[3]}",
+                      "")
+
+    conn.close()
+
+# --- Attachments Functions ---
+def add_attachment(transaction_id, file_path, file_name, file_type=""):
+    """ Adds an attachment to a transaction """
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO attachments (transaction_id, file_name, file_path, file_type)
+        VALUES (?, ?, ?, ?)
+    """, (transaction_id, file_name, file_path, file_type))
+
+    conn.commit()
+    attachment_id = cursor.lastrowid
+
+    # Log the addition
+    add_audit_log("INSERT", "attachments", attachment_id,
+                  f"Προσθήκη αρχείου στη συναλλαγή #{transaction_id}",
+                  "",
+                  f"Αρχείο: {file_name}")
+
+    conn.close()
+    return attachment_id
+
+def get_attachments(transaction_id):
+    """ Gets all attachments for a transaction """
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, file_name, file_path, file_type, uploaded_at
+        FROM attachments
+        WHERE transaction_id = ?
+        ORDER BY uploaded_at DESC
+    """, (transaction_id,))
+
+    attachments = cursor.fetchall()
+    conn.close()
+    return attachments
+
+def delete_attachment(attachment_id):
+    """ Deletes an attachment """
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    # Get attachment details for audit log
+    cursor.execute("""
+        SELECT transaction_id, file_name
+        FROM attachments
+        WHERE id = ?
+    """, (attachment_id,))
+    details = cursor.fetchone()
+
+    cursor.execute("DELETE FROM attachments WHERE id = ?", (attachment_id,))
+    conn.commit()
+
+    # Log the deletion
+    if details:
+        add_audit_log("DELETE", "attachments", attachment_id,
+                      f"Διαγραφή αρχείου από συναλλαγή #{details[0]}",
+                      f"Αρχείο: {details[1]}",
+                      "")
+
+    conn.close()
+
+# --- Issued Receipts Functions ---
+def add_issued_receipt(transaction_id, receipt_type, file_path, receipt_number="", issued_by=""):
+    """ Records an issued receipt """
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        INSERT INTO issued_receipts (transaction_id, receipt_type, file_path, receipt_number, issued_by)
+        VALUES (?, ?, ?, ?, ?)
+    """, (transaction_id, receipt_type, file_path, receipt_number, issued_by))
+
+    conn.commit()
+    receipt_id = cursor.lastrowid
+
+    # Log the issuance
+    add_audit_log("INSERT", "issued_receipts", receipt_id,
+                  f"Έκδοση απόδειξης για συναλλαγή #{transaction_id}",
+                  "",
+                  f"Τύπος: {receipt_type}, Αριθμός: {receipt_number}")
+
+    conn.close()
+    return receipt_id
+
+def get_issued_receipts(transaction_id):
+    """ Gets all issued receipts for a transaction """
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT id, receipt_type, receipt_number, file_path, issued_at, issued_by
+        FROM issued_receipts
+        WHERE transaction_id = ?
+        ORDER BY issued_at DESC
+    """, (transaction_id,))
+
+    receipts = cursor.fetchall()
+    conn.close()
+    return receipts
+
+def delete_issued_receipt(receipt_id):
+    """ Deletes an issued receipt record """
+    conn = connect_db()
+    cursor = conn.cursor()
+
+    # Get receipt details for audit log
+    cursor.execute("""
+        SELECT transaction_id, receipt_type, receipt_number
+        FROM issued_receipts
+        WHERE id = ?
+    """, (receipt_id,))
+    details = cursor.fetchone()
+
+    cursor.execute("DELETE FROM issued_receipts WHERE id = ?", (receipt_id,))
+    conn.commit()
+
+    # Log the deletion
+    if details:
+        add_audit_log("DELETE", "issued_receipts", receipt_id,
+                      f"Διαγραφή απόδειξης από συναλλαγή #{details[0]}",
+                      f"Τύπος: {details[1]}, Αριθμός: {details[2]}",
                       "")
 
     conn.close()

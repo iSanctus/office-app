@@ -131,23 +131,23 @@ class ReceiptGenerator:
             except:
                 pass
 
-        # Company Header
-        c.setFont(self.greek_font_bold, 16)
-        c.drawString(8*cm, height - 2.5*cm, self.company_name if self.company_name else "Company Name")
+        # Company Header (to the right of logo)
+        c.setFont(FONT_BOLD, 16)
+        c.drawString(company_info_x, height - 2.5*cm, self.company_name if self.company_name else "Επωνυμία Εταιρείας")
 
-        c.setFont(self.greek_font, 10)
+        c.setFont(FONT_NAME, 10)
         y = height - 3.2*cm
         if self.company_address:
-            c.drawString(8*cm, y, f"Address: {self.company_address}")
+            c.drawString(company_info_x, y, f"Διεύθυνση: {self.company_address}")
             y -= 0.5*cm
         if self.company_phone:
-            c.drawString(8*cm, y, f"Phone: {self.company_phone}")
+            c.drawString(company_info_x, y, f"Τηλ: {self.company_phone}")
             y -= 0.5*cm
         if self.company_email:
             c.drawString(company_info_x, y, f"Email: {self.company_email}")
             y -= 0.5*cm
         if self.company_tax_id:
-            c.drawString(8*cm, y, f"Tax ID: {self.company_tax_id}")
+            c.drawString(company_info_x, y, f"ΑΦΜ: {self.company_tax_id}")
 
         # Receipt Title
         c.setFont(self.greek_font_bold, 20)
@@ -201,33 +201,26 @@ class ReceiptGenerator:
                 c.drawString(2*cm, y, line)
                 y -= 0.5*cm
 
-        # Custom Notes (from receipt dialog)
-        if custom_notes:
-            y -= 1*cm
-            c.setFont(self.greek_font_bold, 11)
-            c.drawString(2*cm, y, "Additional Notes:")
-            y -= 0.6*cm
-            c.setFont(self.greek_font, 10)
-            custom_notes_lines = self._wrap_text(custom_notes, max_width, c, self.greek_font, 10)
-            for line in custom_notes_lines:
-                c.drawString(2*cm, y, line)
-                y -= 0.5*cm
+        # Dual Signature Section
+        sig_y = 5*cm
 
-        # Signature
+        # Left signature (Engineer/Company)
         if self.signature_path and os.path.exists(self.signature_path):
             try:
-                sig_y = 5*cm
-                c.drawImage(self.signature_path, width - 8*cm, sig_y, width=4*cm, height=2*cm, preserveAspectRatio=True, mask='auto')
-                c.setFont(self.greek_font, 9)
-                c.drawCentredString(width - 6*cm, sig_y - 0.5*cm, "Signature / Stamp")
+                c.drawImage(self.signature_path, 2*cm, sig_y, width=4*cm, height=2*cm, preserveAspectRatio=True, mask='auto')
             except:
                 pass
         else:
-            # Signature line
-            sig_y = 5*cm
-            c.line(width - 8*cm, sig_y, width - 4*cm, sig_y)
-            c.setFont(self.greek_font, 9)
-            c.drawCentredString(width - 6*cm, sig_y - 0.5*cm, "Signature / Stamp")
+            # Signature line for company
+            c.line(2*cm, sig_y, 6*cm, sig_y)
+
+        c.setFont(FONT_NAME, 9)
+        c.drawCentredString(4*cm, sig_y - 0.5*cm, "Υπογραφή / Σφραγίδα Μηχανικού")
+
+        # Right signature (Client)
+        c.line(width - 8*cm, sig_y, width - 4*cm, sig_y)
+        c.setFont(FONT_NAME, 9)
+        c.drawCentredString(width - 6*cm, sig_y - 0.5*cm, "Υπογραφή / Σφραγίδα Πελάτη")
 
         # Footer
         c.setFont(self.greek_font, 8)
@@ -269,23 +262,23 @@ class ReceiptGenerator:
             except:
                 pass
 
-        # Company Header
-        c.setFont(self.greek_font_bold, 16)
-        c.drawString(8*cm, height - 2.5*cm, self.company_name if self.company_name else "Company Name")
+        # Company Header (to the right of logo)
+        c.setFont(FONT_BOLD, 16)
+        c.drawString(company_info_x, height - 2.5*cm, self.company_name if self.company_name else "Επωνυμία Εταιρείας")
 
         c.setFont(self.greek_font, 10)
         y = height - 3.2*cm
         if self.company_address:
-            c.drawString(8*cm, y, f"Address: {self.company_address}")
+            c.drawString(company_info_x, y, f"Διεύθυνση: {self.company_address}")
             y -= 0.5*cm
         if self.company_phone:
-            c.drawString(8*cm, y, f"Phone: {self.company_phone}")
+            c.drawString(company_info_x, y, f"Τηλ: {self.company_phone}")
             y -= 0.5*cm
         if self.company_email:
             c.drawString(company_info_x, y, f"Email: {self.company_email}")
             y -= 0.5*cm
         if self.company_tax_id:
-            c.drawString(8*cm, y, f"Tax ID: {self.company_tax_id}")
+            c.drawString(company_info_x, y, f"ΑΦΜ: {self.company_tax_id}")
 
         # Receipt Title
         c.setFont(self.greek_font_bold, 20)
@@ -339,32 +332,26 @@ class ReceiptGenerator:
                 c.drawString(2*cm, y, line)
                 y -= 0.5*cm
 
-        # Custom Notes (from receipt dialog)
-        if custom_notes:
-            y -= 1*cm
-            c.setFont(self.greek_font_bold, 11)
-            c.drawString(2*cm, y, "Additional Notes:")
-            y -= 0.6*cm
-            c.setFont(self.greek_font, 10)
-            custom_notes_lines = self._wrap_text(custom_notes, max_width, c, self.greek_font, 10)
-            for line in custom_notes_lines:
-                c.drawString(2*cm, y, line)
-                y -= 0.5*cm
+        # Dual Signature Section
+        sig_y = 5*cm
 
-        # Signature
+        # Left signature (Engineer/Company)
         if self.signature_path and os.path.exists(self.signature_path):
             try:
-                sig_y = 5*cm
-                c.drawImage(self.signature_path, width - 8*cm, sig_y, width=4*cm, height=2*cm, preserveAspectRatio=True, mask='auto')
-                c.drawCentredString(width - 6*cm, sig_y - 0.5*cm, "Signature / Stamp")
+                c.drawImage(self.signature_path, 2*cm, sig_y, width=4*cm, height=2*cm, preserveAspectRatio=True, mask='auto')
             except:
                 pass
         else:
-            # Signature line
-            sig_y = 5*cm
-            c.line(width - 8*cm, sig_y, width - 4*cm, sig_y)
-            c.setFont(self.greek_font, 9)
-            c.drawCentredString(width - 6*cm, sig_y - 0.5*cm, "Signature / Stamp")
+            # Signature line for company
+            c.line(2*cm, sig_y, 6*cm, sig_y)
+
+        c.setFont(FONT_NAME, 9)
+        c.drawCentredString(4*cm, sig_y - 0.5*cm, "Υπογραφή / Σφραγίδα Μηχανικού")
+
+        # Right signature (Client)
+        c.line(width - 8*cm, sig_y, width - 4*cm, sig_y)
+        c.setFont(FONT_NAME, 9)
+        c.drawCentredString(width - 6*cm, sig_y - 0.5*cm, "Υπογραφή / Σφραγίδα Πελάτη")
 
         # Footer
         c.setFont(self.greek_font, 8)

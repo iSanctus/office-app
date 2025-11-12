@@ -171,15 +171,15 @@ class EditTransactionWindow(ctk.CTkToplevel):
         self.transaction_id = transaction_id
 
         self.title("Επεξεργασία Συναλλαγής")
-        self.geometry("500x400")
+        self.geometry("650x800")
         self.transient(master)
         self.grab_set()
 
         # Get transaction details
         _id, current_notes, current_status = db.get_transaction_details(self.transaction_id)
 
-        # Main container
-        main_frame = ctk.CTkFrame(self)
+        # Main container - Scrollable
+        main_frame = ctk.CTkScrollableFrame(self)
         main_frame.pack(fill="both", expand=True, padx=20, pady=20)
 
         # Title
@@ -206,9 +206,43 @@ class EditTransactionWindow(ctk.CTkToplevel):
         notes_label = ctk.CTkLabel(main_frame, text="Σχόλια / Παρατηρήσεις:", font=ctk.CTkFont(weight="bold"))
         notes_label.pack(pady=(10, 5), anchor="w")
 
-        self.notes_textbox = ctk.CTkTextbox(main_frame, height=150)
-        self.notes_textbox.pack(fill="both", expand=True, pady=(0, 15))
+        self.notes_textbox = ctk.CTkTextbox(main_frame, height=100)
+        self.notes_textbox.pack(fill="both", expand=False, pady=(0, 15))
         self.notes_textbox.insert("1.0", current_notes if current_notes else "")
+
+        # Attachments Section
+        attachments_label = ctk.CTkLabel(main_frame, text="📎 Συνημμένα Αρχεία:", font=ctk.CTkFont(weight="bold"))
+        attachments_label.pack(pady=(10, 5), anchor="w")
+
+        # Attachments list frame
+        self.attachments_list_frame = ctk.CTkScrollableFrame(main_frame, height=120)
+        self.attachments_list_frame.pack(fill="x", pady=(0, 10))
+
+        # Attachment buttons
+        attach_btn_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        attach_btn_frame.pack(fill="x", pady=(0, 10))
+
+        add_attach_btn = ctk.CTkButton(
+            attach_btn_frame,
+            text="➕ Προσθήκη Αρχείων",
+            command=self.add_attachments,
+            height=30
+        )
+        add_attach_btn.pack(side="left")
+
+        # Load and display attachments
+        self.load_attachments()
+
+        # Receipt History Section
+        receipts_label = ctk.CTkLabel(main_frame, text="🧾 Ιστορικό Αποδείξεων:", font=ctk.CTkFont(weight="bold"))
+        receipts_label.pack(pady=(15, 5), anchor="w")
+
+        # Receipts list frame
+        self.receipts_list_frame = ctk.CTkScrollableFrame(main_frame, height=120)
+        self.receipts_list_frame.pack(fill="x", pady=(0, 10))
+
+        # Load and display receipts
+        self.load_receipts()
 
         # Buttons
         button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
@@ -247,6 +281,159 @@ class EditTransactionWindow(ctk.CTkToplevel):
             self.master_app.refresh_customer_view()
 
         self.destroy()
+
+    def load_attachments(self):
+        """Load and display all attachments for this transaction"""
+        # Clear current display
+        for widget in self.attachments_list_frame.winfo_children():
+            widget.destroy()
+
+        # Get attachments from database
+        attachments = db.get_attachments(self.transaction_id)
+
+        if not attachments:
+            placeholder = ctk.CTkLabel(
+                self.attachments_list_frame,
+                text="Δεν υπάρχουν συνημμένα αρχεία",
+                text_color="gray"
+            )
+            placeholder.pack(pady=10)
+        else:
+            for attachment in attachments:
+                att_id, file_name, file_path, file_type, uploaded_at = attachment
+
+                file_frame = ctk.CTkFrame(self.attachments_list_frame, fg_color="transparent")
+                file_frame.pack(fill="x", pady=2)
+
+                # File info
+                file_label = ctk.CTkLabel(
+                    file_frame,
+                    text=f"📄 {file_name}",
+                    anchor="w"
+                )
+                file_label.pack(side="left", fill="x", expand=True)
+
+                # Open button
+                open_btn = ctk.CTkButton(
+                    file_frame,
+                    text="📂 Άνοιγμα",
+                    width=80,
+                    height=25,
+                    command=lambda p=file_path: self.open_attachment(p)
+                )
+                open_btn.pack(side="right", padx=(5, 0))
+
+                # Delete button
+                delete_btn = ctk.CTkButton(
+                    file_frame,
+                    text="🗑️",
+                    width=30,
+                    height=25,
+                    command=lambda aid=att_id: self.delete_attachment(aid),
+                    fg_color="#8B0000"
+                )
+                delete_btn.pack(side="right")
+
+    def add_attachments(self):
+        """Add new attachments to this transaction"""
+        filepaths = filedialog.askopenfilenames(title="Επιλογή Αρχείων")
+        if filepaths:
+            for filepath in filepaths:
+                # Copy file to attachments directory
+                filename = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_{os.path.basename(filepath)}"
+                final_path = os.path.join(db.ATTACHMENTS_DIR, filename)
+                shutil.copy(filepath, final_path)
+
+                # Get file type
+                file_ext = os.path.splitext(filepath)[1].lower()
+
+                # Add to database
+                db.add_attachment(self.transaction_id, final_path, os.path.basename(filepath), file_ext)
+
+            # Refresh display
+            self.load_attachments()
+            messagebox.showinfo("Επιτυχία", f"Προστέθηκαν {len(filepaths)} αρχείο/α", parent=self)
+
+    def open_attachment(self, file_path):
+        """Open an attachment file"""
+        if os.path.exists(file_path):
+            os.startfile(file_path)  # Windows
+        else:
+            messagebox.showerror("Σφάλμα", "Το αρχείο δεν βρέθηκε", parent=self)
+
+    def delete_attachment(self, attachment_id):
+        """Delete an attachment"""
+        if messagebox.askyesno("Επιβεβαίωση", "Είστε σίγουροι ότι θέλετε να διαγράψετε αυτό το αρχείο;", parent=self):
+            db.delete_attachment(attachment_id)
+            self.load_attachments()
+            messagebox.showinfo("Επιτυχία", "Το αρχείο διαγράφηκε", parent=self)
+
+    def load_receipts(self):
+        """Load and display all issued receipts for this transaction"""
+        # Clear current display
+        for widget in self.receipts_list_frame.winfo_children():
+            widget.destroy()
+
+        # Get receipts from database
+        receipts = db.get_issued_receipts(self.transaction_id)
+
+        if not receipts:
+            placeholder = ctk.CTkLabel(
+                self.receipts_list_frame,
+                text="Δεν έχουν εκδοθεί αποδείξεις",
+                text_color="gray"
+            )
+            placeholder.pack(pady=10)
+        else:
+            for receipt in receipts:
+                receipt_id, receipt_type, receipt_number, file_path, issued_at, issued_by = receipt
+
+                receipt_frame = ctk.CTkFrame(self.receipts_list_frame, fg_color="transparent")
+                receipt_frame.pack(fill="x", pady=2)
+
+                # Format date
+                try:
+                    issued_date = datetime.datetime.strptime(issued_at, '%Y-%m-%d %H:%M:%S')
+                    date_str = issued_date.strftime('%d/%m/%Y %H:%M')
+                except:
+                    date_str = issued_at
+
+                # Receipt info
+                receipt_label = ctk.CTkLabel(
+                    receipt_frame,
+                    text=f"🧾 {receipt_type} - {date_str}" + (f" (#{receipt_number})" if receipt_number else ""),
+                    anchor="w"
+                )
+                receipt_label.pack(side="left", fill="x", expand=True)
+
+                # Open button
+                open_btn = ctk.CTkButton(
+                    receipt_frame,
+                    text="📂 Άνοιγμα",
+                    width=80,
+                    height=25,
+                    command=lambda p=file_path: self.open_attachment(p)
+                )
+                open_btn.pack(side="right", padx=(5, 0))
+
+                # Reprint button
+                reprint_btn = ctk.CTkButton(
+                    receipt_frame,
+                    text="🖨️ Επανεκτύπωση",
+                    width=120,
+                    height=25,
+                    command=lambda p=file_path: self.reprint_receipt(p)
+                )
+                reprint_btn.pack(side="right", padx=(5, 0))
+
+    def reprint_receipt(self, file_path):
+        """Reprint an existing receipt"""
+        if os.path.exists(file_path):
+            # Just open the file - user can print from their PDF viewer
+            os.startfile(file_path)
+            messagebox.showinfo("Επανεκτύπωση", "Το αρχείο ανοίχτηκε. Μπορείτε να το εκτυπώσετε από το πρόγραμμα προβολής PDF.", parent=self)
+        else:
+            messagebox.showerror("Σφάλμα", "Το αρχείο απόδειξης δεν βρέθηκε", parent=self)
 
 
 class CustomerProfileWindow(ctk.CTkToplevel):
@@ -412,6 +599,9 @@ class CustomerProfileWindow(ctk.CTkToplevel):
 
         self.trans_tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
+
+        # Bind double-click to edit transaction
+        self.trans_tree.bind("<Double-1>", lambda e: self.edit_selected_transaction())
 
         # Load transactions
         for record in records:
@@ -781,10 +971,13 @@ class ReceiptOptionsWindow(ctk.CTkToplevel):
         custom_notes = self.receipt_notes_textbox.get("1.0", "end-1c").strip()
 
         try:
+            receipt_type_text = "Απόδειξη Πληρωμής" if self.receipt_type.get() == "payment" else "Απόδειξη Είσπραξης"
+            receipt_number = f"#{self.trans_id}"
+
             if self.receipt_type.get() == "payment":
                 generator.generate_payment_receipt(
                     output_path,
-                    f"#{self.trans_id}",
+                    receipt_number,
                     self.customer_name,
                     self.amount,
                     self.service,
@@ -795,7 +988,7 @@ class ReceiptOptionsWindow(ctk.CTkToplevel):
             else:
                 generator.generate_collection_receipt(
                     output_path,
-                    f"#{self.trans_id}",
+                    receipt_number,
                     self.customer_name,
                     self.amount,
                     self.service,
@@ -803,6 +996,20 @@ class ReceiptOptionsWindow(ctk.CTkToplevel):
                     notes=self.transaction_notes,
                     custom_notes=custom_notes
                 )
+
+            # Save a copy to attachments directory for tracking
+            backup_filename = f"receipt_{self.trans_id}_{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}.pdf"
+            backup_path = os.path.join(db.ATTACHMENTS_DIR, backup_filename)
+            shutil.copy(output_path, backup_path)
+
+            # Record the issued receipt in database
+            db.add_issued_receipt(
+                self.trans_id,
+                receipt_type_text,
+                backup_path,
+                receipt_number,
+                ""  # issued_by (could be added in future)
+            )
 
             messagebox.showinfo("Επιτυχία", f"Η απόδειξη δημιουργήθηκε επιτυχώς!\n\n{output_path}", parent=self)
 
@@ -945,25 +1152,39 @@ class App(ctk.CTk):
         )
         self.status_menu.pack(fill="x", padx=20, pady=(0, 15))
 
-        # File Attachment
-        attachment_label = ctk.CTkLabel(left_panel, text="Επισυναπτόμενο Αρχείο", font=ctk.CTkFont(weight="bold"))
+        # File Attachments (Multiple)
+        attachment_label = ctk.CTkLabel(left_panel, text="Επισυναπτόμενα Αρχεία", font=ctk.CTkFont(weight="bold"))
         attachment_label.pack(pady=(0, 5), padx=20, anchor="w")
 
-        self.attachment_path = ctk.StringVar()
-        self.attachment_label = ctk.CTkLabel(
-            left_panel,
-            text="Κανένα αρχείο επιλεγμένο",
-            text_color="gray"
-        )
-        self.attachment_label.pack(pady=(0, 5), padx=20)
+        # Frame for attachment list
+        self.attachments_frame = ctk.CTkScrollableFrame(left_panel, height=100)
+        self.attachments_frame.pack(fill="x", padx=20, pady=(0, 5))
+
+        # Store list of selected files
+        self.selected_files = []
+
+        # Add/Remove buttons
+        attach_buttons_frame = ctk.CTkFrame(left_panel, fg_color="transparent")
+        attach_buttons_frame.pack(fill="x", padx=20, pady=(0, 25))
 
         attach_btn = ctk.CTkButton(
-            left_panel,
-            text="📎 Επισύναψη Αρχείου",
-            command=self.select_file,
-            height=35
+            attach_buttons_frame,
+            text="📎 Προσθήκη Αρχείων",
+            command=self.select_files,
+            height=35,
+            width=200
         )
-        attach_btn.pack(fill="x", padx=20, pady=(0, 25))
+        attach_btn.pack(side="left", padx=(0, 10))
+
+        clear_attach_btn = ctk.CTkButton(
+            attach_buttons_frame,
+            text="🗑️ Καθαρισμός",
+            command=self.clear_attachments,
+            height=35,
+            width=100,
+            fg_color="#8B0000"
+        )
+        clear_attach_btn.pack(side="left")
 
         # Submit Button
         submit_btn = ctk.CTkButton(
@@ -1127,12 +1348,62 @@ class App(ctk.CTk):
         self.customer_name_entry.delete(0, 'end')
         self.customer_name_entry.insert(0, customer_name)
 
-    def select_file(self):
-        """Select file attachment"""
-        filepath = filedialog.askopenfilename(title="Επιλογή Αρχείου")
-        if filepath:
-            self.attachment_path.set(filepath)
-            self.attachment_label.configure(text=os.path.basename(filepath), text_color="white")
+    def select_files(self):
+        """Select multiple file attachments"""
+        filepaths = filedialog.askopenfilenames(title="Επιλογή Αρχείων")
+        if filepaths:
+            for filepath in filepaths:
+                if filepath not in self.selected_files:
+                    self.selected_files.append(filepath)
+            self.update_attachments_display()
+
+    def clear_attachments(self):
+        """Clear all selected attachments"""
+        self.selected_files = []
+        self.update_attachments_display()
+
+    def remove_attachment(self, filepath):
+        """Remove a specific attachment"""
+        if filepath in self.selected_files:
+            self.selected_files.remove(filepath)
+            self.update_attachments_display()
+
+    def update_attachments_display(self):
+        """Update the display of selected attachments"""
+        # Clear current display
+        for widget in self.attachments_frame.winfo_children():
+            widget.destroy()
+
+        if not self.selected_files:
+            # Show placeholder
+            placeholder = ctk.CTkLabel(
+                self.attachments_frame,
+                text="Κανένα αρχείο επιλεγμένο",
+                text_color="gray"
+            )
+            placeholder.pack(pady=10)
+        else:
+            # Show each file with remove button
+            for filepath in self.selected_files:
+                file_frame = ctk.CTkFrame(self.attachments_frame, fg_color="transparent")
+                file_frame.pack(fill="x", pady=2)
+
+                file_label = ctk.CTkLabel(
+                    file_frame,
+                    text=f"📄 {os.path.basename(filepath)}",
+                    anchor="w"
+                )
+                file_label.pack(side="left", fill="x", expand=True)
+
+                remove_btn = ctk.CTkButton(
+                    file_frame,
+                    text="✖",
+                    width=30,
+                    height=25,
+                    command=lambda f=filepath: self.remove_attachment(f),
+                    fg_color="#8B0000"
+                )
+                remove_btn.pack(side="right")
 
     def add_transaction(self):
         """Add new transaction"""
@@ -1164,20 +1435,25 @@ class App(ctk.CTk):
         # Get service ID
         service_id = {name: sid for sid, name in db.get_services()}.get(service_name)
 
-        # Handle attachment
-        final_attachment_path = ""
-        original_path = self.attachment_path.get()
-        if original_path:
-            filename = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_{os.path.basename(original_path)}"
-            final_attachment_path = os.path.join(db.ATTACHMENTS_DIR, filename)
-            shutil.copy(original_path, final_attachment_path)
-
-        # Add transaction
-        db.add_transaction(
+        # Add transaction (no longer storing single attachment path)
+        transaction_id = db.add_transaction(
             customer_id, service_id, notes,
             datetime.date.today().strftime('%Y-%m-%d'),
-            cost_pre_vat_float, cost_final_float, status, final_attachment_path
+            cost_pre_vat_float, cost_final_float, status, ""
         )
+
+        # Handle multiple attachments
+        if self.selected_files:
+            for original_path in self.selected_files:
+                filename = f"{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}_{os.path.basename(original_path)}"
+                final_path = os.path.join(db.ATTACHMENTS_DIR, filename)
+                shutil.copy(original_path, final_path)
+
+                # Get file type
+                file_ext = os.path.splitext(original_path)[1].lower()
+
+                # Add to attachments table
+                db.add_attachment(transaction_id, final_path, os.path.basename(original_path), file_ext)
 
         # Log the action
         db.add_audit_log(
@@ -1195,8 +1471,8 @@ class App(ctk.CTk):
         self.customer_name_entry.delete(0, 'end')
         self.notes_entry.delete(0, 'end')
         self.cost_final_entry.delete(0, 'end')
-        self.attachment_path.set("")
-        self.attachment_label.configure(text="Κανένα αρχείο επιλεγμένο", text_color="gray")
+        self.selected_files = []
+        self.update_attachments_display()
 
     def refresh_main_table(self, filter_choice=None):
         """Refresh the main transactions table"""
