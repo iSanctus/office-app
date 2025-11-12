@@ -74,39 +74,44 @@ class ReceiptGenerator:
         c = canvas.Canvas(output_path, pagesize=A4)
         width, height = A4
 
-        # Draw logo if provided
+        # Header section with logo and company info side by side
         y_pos = height - 2*cm
+
+        # Logo on the left (if provided)
+        logo_x = 2*cm
+        company_info_x = 7*cm  # Company info starts here
+
         if self.logo_path and os.path.exists(self.logo_path):
             try:
                 img = Image.open(self.logo_path)
                 img_width, img_height = img.size
                 aspect = img_height / float(img_width)
-                logo_width = 3*cm
+                logo_width = 4*cm
                 logo_height = logo_width * aspect
-                if logo_height > 2*cm:
-                    logo_height = 2*cm
+                if logo_height > 3*cm:
+                    logo_height = 3*cm
                     logo_width = logo_height / aspect
-                c.drawImage(self.logo_path, 2*cm, y_pos - logo_height, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
+                c.drawImage(self.logo_path, logo_x, y_pos - logo_height, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
             except:
                 pass
 
-        # Company Header
-        c.setFont("Helvetica-Bold", 16)
-        c.drawString(8*cm, height - 2.5*cm, self.company_name if self.company_name else "Επωνυμία Εταιρείας")
+        # Company Header (to the right of logo)
+        c.setFont(FONT_BOLD, 16)
+        c.drawString(company_info_x, height - 2.5*cm, self.company_name if self.company_name else "Επωνυμία Εταιρείας")
 
-        c.setFont("Helvetica", 10)
+        c.setFont(FONT_NAME, 10)
         y = height - 3.2*cm
         if self.company_address:
-            c.drawString(8*cm, y, f"Διεύθυνση: {self.company_address}")
+            c.drawString(company_info_x, y, f"Διεύθυνση: {self.company_address}")
             y -= 0.5*cm
         if self.company_phone:
-            c.drawString(8*cm, y, f"Τηλ: {self.company_phone}")
+            c.drawString(company_info_x, y, f"Τηλ: {self.company_phone}")
             y -= 0.5*cm
         if self.company_email:
-            c.drawString(8*cm, y, f"Email: {self.company_email}")
+            c.drawString(company_info_x, y, f"Email: {self.company_email}")
             y -= 0.5*cm
         if self.company_tax_id:
-            c.drawString(8*cm, y, f"ΑΦΜ: {self.company_tax_id}")
+            c.drawString(company_info_x, y, f"ΑΦΜ: {self.company_tax_id}")
 
         # Receipt Title
         c.setFont(FONT_BOLD, 20)
@@ -160,21 +165,26 @@ class ReceiptGenerator:
                 c.drawString(2*cm, y, line)
                 y -= 0.5*cm
 
-        # Signature
+        # Dual Signature Section
+        sig_y = 5*cm
+
+        # Left signature (Engineer/Company)
         if self.signature_path and os.path.exists(self.signature_path):
             try:
-                sig_y = 5*cm
-                c.drawImage(self.signature_path, width - 8*cm, sig_y, width=4*cm, height=2*cm, preserveAspectRatio=True, mask='auto')
-                c.setFont(FONT_NAME, 9)
-                c.drawCentredString(width - 6*cm, sig_y - 0.5*cm, "Υπογραφή / Σφραγίδα")
+                c.drawImage(self.signature_path, 2*cm, sig_y, width=4*cm, height=2*cm, preserveAspectRatio=True, mask='auto')
             except:
                 pass
         else:
-            # Signature line
-            sig_y = 5*cm
-            c.line(width - 8*cm, sig_y, width - 4*cm, sig_y)
-            c.setFont(FONT_NAME, 9)
-            c.drawCentredString(width - 6*cm, sig_y - 0.5*cm, "Υπογραφή / Σφραγίδα")
+            # Signature line for company
+            c.line(2*cm, sig_y, 6*cm, sig_y)
+
+        c.setFont(FONT_NAME, 9)
+        c.drawCentredString(4*cm, sig_y - 0.5*cm, "Υπογραφή / Σφραγίδα Μηχανικού")
+
+        # Right signature (Client)
+        c.line(width - 8*cm, sig_y, width - 4*cm, sig_y)
+        c.setFont(FONT_NAME, 9)
+        c.drawCentredString(width - 6*cm, sig_y - 0.5*cm, "Υπογραφή / Σφραγίδα Πελάτη")
 
         # Footer
         c.setFont(FONT_OBLIQUE, 8)
@@ -193,39 +203,44 @@ class ReceiptGenerator:
         c = canvas.Canvas(output_path, pagesize=A4)
         width, height = A4
 
-        # Draw logo if provided
+        # Header section with logo and company info side by side
         y_pos = height - 2*cm
+
+        # Logo on the left (if provided)
+        logo_x = 2*cm
+        company_info_x = 7*cm  # Company info starts here
+
         if self.logo_path and os.path.exists(self.logo_path):
             try:
                 img = Image.open(self.logo_path)
                 img_width, img_height = img.size
                 aspect = img_height / float(img_width)
-                logo_width = 3*cm
+                logo_width = 4*cm
                 logo_height = logo_width * aspect
-                if logo_height > 2*cm:
-                    logo_height = 2*cm
+                if logo_height > 3*cm:
+                    logo_height = 3*cm
                     logo_width = logo_height / aspect
-                c.drawImage(self.logo_path, 2*cm, y_pos - logo_height, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
+                c.drawImage(self.logo_path, logo_x, y_pos - logo_height, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
             except:
                 pass
 
-        # Company Header
+        # Company Header (to the right of logo)
         c.setFont(FONT_BOLD, 16)
-        c.drawString(8*cm, height - 2.5*cm, self.company_name if self.company_name else "Επωνυμία Εταιρείας")
+        c.drawString(company_info_x, height - 2.5*cm, self.company_name if self.company_name else "Επωνυμία Εταιρείας")
 
         c.setFont(FONT_NAME, 10)
         y = height - 3.2*cm
         if self.company_address:
-            c.drawString(8*cm, y, f"Διεύθυνση: {self.company_address}")
+            c.drawString(company_info_x, y, f"Διεύθυνση: {self.company_address}")
             y -= 0.5*cm
         if self.company_phone:
-            c.drawString(8*cm, y, f"Τηλ: {self.company_phone}")
+            c.drawString(company_info_x, y, f"Τηλ: {self.company_phone}")
             y -= 0.5*cm
         if self.company_email:
-            c.drawString(8*cm, y, f"Email: {self.company_email}")
+            c.drawString(company_info_x, y, f"Email: {self.company_email}")
             y -= 0.5*cm
         if self.company_tax_id:
-            c.drawString(8*cm, y, f"ΑΦΜ: {self.company_tax_id}")
+            c.drawString(company_info_x, y, f"ΑΦΜ: {self.company_tax_id}")
 
         # Receipt Title
         c.setFont(FONT_BOLD, 20)
@@ -279,21 +294,26 @@ class ReceiptGenerator:
                 c.drawString(2*cm, y, line)
                 y -= 0.5*cm
 
-        # Signature
+        # Dual Signature Section
+        sig_y = 5*cm
+
+        # Left signature (Engineer/Company)
         if self.signature_path and os.path.exists(self.signature_path):
             try:
-                sig_y = 5*cm
-                c.drawImage(self.signature_path, width - 8*cm, sig_y, width=4*cm, height=2*cm, preserveAspectRatio=True, mask='auto')
-                c.setFont(FONT_NAME, 9)
-                c.drawCentredString(width - 6*cm, sig_y - 0.5*cm, "Υπογραφή / Σφραγίδα")
+                c.drawImage(self.signature_path, 2*cm, sig_y, width=4*cm, height=2*cm, preserveAspectRatio=True, mask='auto')
             except:
                 pass
         else:
-            # Signature line
-            sig_y = 5*cm
-            c.line(width - 8*cm, sig_y, width - 4*cm, sig_y)
-            c.setFont(FONT_NAME, 9)
-            c.drawCentredString(width - 6*cm, sig_y - 0.5*cm, "Υπογραφή / Σφραγίδα")
+            # Signature line for company
+            c.line(2*cm, sig_y, 6*cm, sig_y)
+
+        c.setFont(FONT_NAME, 9)
+        c.drawCentredString(4*cm, sig_y - 0.5*cm, "Υπογραφή / Σφραγίδα Μηχανικού")
+
+        # Right signature (Client)
+        c.line(width - 8*cm, sig_y, width - 4*cm, sig_y)
+        c.setFont(FONT_NAME, 9)
+        c.drawCentredString(width - 6*cm, sig_y - 0.5*cm, "Υπογραφή / Σφραγίδα Πελάτη")
 
         # Footer
         c.setFont(FONT_OBLIQUE, 8)

@@ -17,14 +17,14 @@ ctk.set_default_color_theme("blue")
 # ========== HELPER FUNCTIONS ==========
 
 def format_date(date_str):
-    """Convert date from YYYY-MM-DD to dd/mm/yy format"""
+    """Convert date from YYYY-MM-DD to dd/mm/yyyy format"""
     try:
         if not date_str:
             return ""
         # Parse the date string
         date_obj = datetime.datetime.strptime(str(date_str), '%Y-%m-%d')
-        # Format as dd/mm/yy
-        return date_obj.strftime('%d/%m/%y')
+        # Format as dd/mm/yyyy (4-digit year)
+        return date_obj.strftime('%d/%m/%Y')
     except:
         # If parsing fails, return original
         return str(date_str)
