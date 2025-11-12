@@ -14,7 +14,153 @@ from receipt_generator import ReceiptGenerator
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
+# ========== HELPER FUNCTIONS ==========
+
+def format_date(date_str):
+    """Convert date from YYYY-MM-DD to dd/mm/yyyy format"""
+    try:
+        if not date_str:
+            return ""
+        # Parse the date string
+        date_obj = datetime.datetime.strptime(str(date_str), '%Y-%m-%d')
+        # Format as dd/mm/yyyy (4-digit year)
+        return date_obj.strftime('%d/%m/%Y')
+    except:
+        # If parsing fails, return original
+        return str(date_str)
+
 # ========== DIALOG WINDOWS ==========
+
+class CustomerSelectionDialog(ctk.CTkToplevel):
+    """Dialog for selecting a customer from the list"""
+
+    def __init__(self, master, callback):
+        super().__init__(master)
+        self.callback = callback
+        self.selected_customer = None
+
+        self.title("Επιλογή Πελάτη")
+        self.geometry("500x600")
+        self.transient(master)
+        self.grab_set()
+
+        # Main frame
+        main_frame = ctk.CTkFrame(self)
+        main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+
+        # Title
+        title_label = ctk.CTkLabel(
+            main_frame,
+            text="📖 Λίστα Πελατών",
+            font=ctk.CTkFont(size=20, weight="bold")
+        )
+        title_label.pack(pady=(0, 15))
+
+        # Search box
+        search_label = ctk.CTkLabel(main_frame, text="Αναζήτηση:", font=ctk.CTkFont(weight="bold"))
+        search_label.pack(pady=(0, 5), anchor="w")
+
+        self.search_entry = ctk.CTkEntry(main_frame, height=35, placeholder_text="Πληκτρολογήστε για αναζήτηση...")
+        self.search_entry.pack(fill="x", pady=(0, 15))
+        self.search_entry.bind("<KeyRelease>", self.filter_customers)
+
+        # Customers listbox frame
+        listbox_frame = ctk.CTkFrame(main_frame)
+        listbox_frame.pack(fill="both", expand=True, pady=(0, 15))
+
+        # Create a scrollable frame for customers
+        self.customers_listbox = ctk.CTkScrollableFrame(listbox_frame)
+        self.customers_listbox.pack(fill="both", expand=True)
+
+        # Load all customers
+        self.all_customers = db.get_services()  # This will be replaced with get_all_customers
+        self.customer_buttons = []
+        self.load_customers()
+
+        # Buttons
+        button_frame = ctk.CTkFrame(main_frame, fg_color="transparent")
+        button_frame.pack(fill="x")
+
+        select_btn = ctk.CTkButton(
+            button_frame,
+            text="✓ Επιλογή",
+            command=self.select_customer,
+            height=40,
+            font=ctk.CTkFont(size=14, weight="bold")
+        )
+        select_btn.pack(side="left", fill="x", expand=True, padx=(0, 5))
+
+        cancel_btn = ctk.CTkButton(
+            button_frame,
+            text="✖ Ακύρωση",
+            command=self.destroy,
+            height=40,
+            fg_color="gray",
+            font=ctk.CTkFont(size=14)
+        )
+        cancel_btn.pack(side="right", fill="x", expand=True, padx=(5, 0))
+
+    def load_customers(self, filter_text=""):
+        """Load customers into the listbox"""
+        # Clear existing buttons
+        for widget in self.customers_listbox.winfo_children():
+            widget.destroy()
+        self.customer_buttons.clear()
+
+        # Get all customers
+        conn = db.connect_db()
+        cursor = conn.cursor()
+        if filter_text:
+            cursor.execute("SELECT name FROM customers WHERE name LIKE ? ORDER BY name", (f"%{filter_text}%",))
+        else:
+            cursor.execute("SELECT name FROM customers ORDER BY name")
+        customers = cursor.fetchall()
+        conn.close()
+
+        # Create buttons for each customer
+        for customer in customers:
+            customer_name = customer[0]
+            btn = ctk.CTkButton(
+                self.customers_listbox,
+                text=customer_name,
+                command=lambda name=customer_name: self.on_customer_click(name),
+                fg_color="transparent",
+                hover_color=("gray70", "gray30"),
+                anchor="w",
+                height=35
+            )
+            # Bind double-click
+            btn.bind("<Double-Button-1>", lambda e, name=customer_name: self.on_customer_double_click(name))
+            btn.pack(fill="x", pady=2)
+            self.customer_buttons.append((customer_name, btn))
+
+    def filter_customers(self, event=None):
+        """Filter customers based on search text"""
+        filter_text = self.search_entry.get().strip()
+        self.load_customers(filter_text)
+
+    def on_customer_click(self, customer_name):
+        """Handle customer button click (single click selects, double click confirms)"""
+        self.selected_customer = customer_name
+        # Highlight selected button
+        for name, btn in self.customer_buttons:
+            if name == customer_name:
+                btn.configure(fg_color=("gray75", "gray25"))
+            else:
+                btn.configure(fg_color="transparent")
+
+    def on_customer_double_click(self, customer_name):
+        """Handle customer button double-click (immediately select and close)"""
+        self.selected_customer = customer_name
+        self.select_customer()
+
+    def select_customer(self):
+        """Confirm selection and close dialog"""
+        if self.selected_customer:
+            self.callback(self.selected_customer)
+            self.destroy()
+        else:
+            messagebox.showwarning("Προσοχή", "Παρακαλώ επιλέξτε έναν πελάτη.", parent=self)
 
 class EditTransactionWindow(ctk.CTkToplevel):
     """Pop-up window for editing transactions"""
@@ -271,7 +417,8 @@ class CustomerProfileWindow(ctk.CTkToplevel):
         for record in records:
             trans_id, service, notes, date, cost, status = record
             tag = 'paid' if status == 'Πληρώθηκε' else 'unpaid'
-            self.trans_tree.insert("", "end", values=(trans_id, service, date, f"{cost:.2f} €", status), tags=(tag,))
+            formatted_date = format_date(date)
+            self.trans_tree.insert("", "end", values=(trans_id, service, formatted_date, f"{cost:.2f} €", status), tags=(tag,))
 
         # Transaction actions
         actions_frame = ctk.CTkFrame(trans_frame, fg_color="transparent")
@@ -388,7 +535,7 @@ class CustomerProfileWindow(ctk.CTkToplevel):
 
         trans_id = self.trans_tree.item(selected[0])['values'][0]
         service = self.trans_tree.item(selected[0])['values'][1]
-        date = self.trans_tree.item(selected[0])['values'][2]
+        date_formatted = self.trans_tree.item(selected[0])['values'][2]  # This is already in dd/mm/yy format
         amount_str = self.trans_tree.item(selected[0])['values'][3]
         amount = float(amount_str.replace(' €', '').replace(',', '.'))
 
@@ -616,6 +763,9 @@ class ReceiptOptionsWindow(ctk.CTkToplevel):
         if not output_path:
             return
 
+        # Get comments from textbox
+        receipt_comments = self.receipt_comments_textbox.get("1.0", "end-1c").strip()
+
         # Create receipt generator
         generator = ReceiptGenerator(
             company_name=company_name,
@@ -727,8 +877,28 @@ class App(ctk.CTk):
         customer_label = ctk.CTkLabel(left_panel, text="Όνομα Πελάτη *", font=ctk.CTkFont(weight="bold"))
         customer_label.pack(pady=(0, 5), padx=20, anchor="w")
 
-        self.customer_name_entry = ctk.CTkEntry(left_panel, height=40, placeholder_text="Εισάγετε όνομα πελάτη...")
-        self.customer_name_entry.pack(fill="x", padx=20, pady=(0, 15))
+        # Customer name entry with book button
+        customer_entry_frame = ctk.CTkFrame(left_panel, fg_color="transparent")
+        customer_entry_frame.pack(fill="x", padx=20, pady=(0, 5))
+
+        self.customer_name_entry = ctk.CTkEntry(customer_entry_frame, height=40, placeholder_text="Εισάγετε όνομα πελάτη...")
+        self.customer_name_entry.pack(side="left", fill="x", expand=True, padx=(0, 5))
+        self.customer_name_entry.bind("<KeyRelease>", self.update_customer_name_suggestions)
+
+        # Book button to open customer selection dialog
+        book_btn = ctk.CTkButton(
+            customer_entry_frame,
+            text="📖",
+            command=self.open_customer_selection,
+            width=40,
+            height=40,
+            font=ctk.CTkFont(size=18)
+        )
+        book_btn.pack(side="right")
+
+        # Suggestions frame for autocomplete
+        self.customer_suggestions_frame = ctk.CTkFrame(left_panel)
+        self.customer_suggestions_buttons = []
 
         # Service
         service_label = ctk.CTkLabel(left_panel, text="Υπηρεσία *", font=ctk.CTkFont(weight="bold"))
@@ -908,6 +1078,55 @@ class App(ctk.CTk):
             self.cost_pre_vat_entry.delete(0, 'end')
             self.cost_pre_vat_entry.configure(state="readonly")
 
+    def update_customer_name_suggestions(self, event):
+        """Update customer name suggestions (autocomplete)"""
+        search_term = self.customer_name_entry.get().strip()
+
+        # Clear existing suggestions
+        for widget in self.customer_suggestions_frame.winfo_children():
+            widget.destroy()
+        self.customer_suggestions_frame.pack_forget()
+
+        if len(search_term) < 1:
+            return
+
+        # Get fuzzy search results
+        results = db.fuzzy_search_customers(search_term)
+
+        if results:
+            self.customer_suggestions_frame.pack(fill="x", padx=20, pady=(0, 10))
+
+            for customer_id, customer_name in results[:5]:  # Show top 5
+                suggestion_btn = ctk.CTkButton(
+                    self.customer_suggestions_frame,
+                    text=customer_name,
+                    command=lambda name=customer_name: self.select_customer_suggestion(name),
+                    fg_color="transparent",
+                    hover_color=("gray70", "gray30"),
+                    anchor="w",
+                    height=30
+                )
+                suggestion_btn.pack(fill="x", padx=5, pady=2)
+
+    def select_customer_suggestion(self, customer_name):
+        """Select a customer from autocomplete suggestions"""
+        self.customer_name_entry.delete(0, 'end')
+        self.customer_name_entry.insert(0, customer_name)
+
+        # Hide suggestions
+        for widget in self.customer_suggestions_frame.winfo_children():
+            widget.destroy()
+        self.customer_suggestions_frame.pack_forget()
+
+    def open_customer_selection(self):
+        """Open customer selection dialog"""
+        CustomerSelectionDialog(self, self.on_customer_selected)
+
+    def on_customer_selected(self, customer_name):
+        """Callback when customer is selected from dialog"""
+        self.customer_name_entry.delete(0, 'end')
+        self.customer_name_entry.insert(0, customer_name)
+
     def select_file(self):
         """Select file attachment"""
         filepath = filedialog.askopenfilename(title="Επιλογή Αρχείου")
@@ -994,7 +1213,8 @@ class App(ctk.CTk):
         for record in records:
             trans_id, customer, service, notes, date, amount, status = record
             tag = 'paid' if status == 'Πληρώθηκε' else 'unpaid'
-            self.tree.insert("", "end", values=(trans_id, customer, service, notes, date, f"{amount:.2f} €", status), tags=(tag,))
+            formatted_date = format_date(date)
+            self.tree.insert("", "end", values=(trans_id, customer, service, notes, formatted_date, f"{amount:.2f} €", status), tags=(tag,))
 
     def on_tree_double_click(self, event):
         """Handle double-click on transaction"""

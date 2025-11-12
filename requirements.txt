@@ -1,15 +1,8 @@
-# Core GUI Framework
+# ZisCRM Requirements
+# Install all with: pip install -r requirements.txt
+
 customtkinter>=5.2.0
-
-# Excel handling for batch import/export
-openpyxl>=3.1.2
-
-# PDF generation for receipts
-reportlab>=4.0.7
-
-# Image handling for logos and signatures
-Pillow>=10.1.0
-
-# Fuzzy string matching for customer search
-fuzzywuzzy>=0.18.0
-python-Levenshtein>=0.23.0
+Pillow>=10.0.0
+reportlab>=4.0.0
+openpyxl>=3.1.0
+pyinstaller>=6.0.0

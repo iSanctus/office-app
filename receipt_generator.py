@@ -10,8 +10,52 @@ from reportlab.pdfgen import canvas
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.utils import ImageReader
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from PIL import Image
 import sys
+
+# Register Greek-compatible fonts
+try:
+    # Try to register DejaVu fonts (common on most systems)
+    pdfmetrics.registerFont(TTFont('DejaVuSans', 'DejaVuSans.ttf'))
+    pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', 'DejaVuSans-Bold.ttf'))
+    pdfmetrics.registerFont(TTFont('DejaVuSans-Oblique', 'DejaVuSans-Oblique.ttf'))
+    FONT_NAME = 'DejaVuSans'
+    FONT_BOLD = 'DejaVuSans-Bold'
+    FONT_OBLIQUE = 'DejaVuSans-Oblique'
+except:
+    # If DejaVu not found, try to find fonts in common locations
+    import platform
+    system = platform.system()
+
+    try:
+        if system == 'Windows':
+            # Try Arial Unicode MS or other Windows fonts that support Greek
+            pdfmetrics.registerFont(TTFont('Arial', 'C:\\Windows\\Fonts\\arial.ttf'))
+            pdfmetrics.registerFont(TTFont('Arial-Bold', 'C:\\Windows\\Fonts\\arialbd.ttf'))
+            pdfmetrics.registerFont(TTFont('Arial-Oblique', 'C:\\Windows\\Fonts\\ariali.ttf'))
+            FONT_NAME = 'Arial'
+            FONT_BOLD = 'Arial-Bold'
+            FONT_OBLIQUE = 'Arial-Oblique'
+        elif system == 'Linux':
+            # Try Liberation Sans on Linux
+            pdfmetrics.registerFont(TTFont('LiberationSans', '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf'))
+            pdfmetrics.registerFont(TTFont('LiberationSans-Bold', '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'))
+            pdfmetrics.registerFont(TTFont('LiberationSans-Oblique', '/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf'))
+            FONT_NAME = 'LiberationSans'
+            FONT_BOLD = 'LiberationSans-Bold'
+            FONT_OBLIQUE = 'LiberationSans-Oblique'
+        else:
+            # MacOS or fallback
+            FONT_NAME = 'Helvetica'
+            FONT_BOLD = 'Helvetica-Bold'
+            FONT_OBLIQUE = 'Helvetica-Oblique'
+    except:
+        # Final fallback to Helvetica (won't show Greek properly but won't crash)
+        FONT_NAME = 'Helvetica'
+        FONT_BOLD = 'Helvetica-Bold'
+        FONT_OBLIQUE = 'Helvetica-Oblique'
 
 class ReceiptGenerator:
     def __init__(self, company_name="", company_address="", company_phone="", company_email="", company_tax_id="", logo_path=None, signature_path=None):
@@ -66,19 +110,24 @@ class ReceiptGenerator:
         c = canvas.Canvas(output_path, pagesize=A4)
         width, height = A4
 
-        # Draw logo if provided
+        # Header section with logo and company info side by side
         y_pos = height - 2*cm
+
+        # Logo on the left (if provided)
+        logo_x = 2*cm
+        company_info_x = 7*cm  # Company info starts here
+
         if self.logo_path and os.path.exists(self.logo_path):
             try:
                 img = Image.open(self.logo_path)
                 img_width, img_height = img.size
                 aspect = img_height / float(img_width)
-                logo_width = 3*cm
+                logo_width = 4*cm
                 logo_height = logo_width * aspect
-                if logo_height > 2*cm:
-                    logo_height = 2*cm
+                if logo_height > 3*cm:
+                    logo_height = 3*cm
                     logo_width = logo_height / aspect
-                c.drawImage(self.logo_path, 2*cm, y_pos - logo_height, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
+                c.drawImage(self.logo_path, logo_x, y_pos - logo_height, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
             except:
                 pass
 
@@ -95,7 +144,7 @@ class ReceiptGenerator:
             c.drawString(8*cm, y, f"Phone: {self.company_phone}")
             y -= 0.5*cm
         if self.company_email:
-            c.drawString(8*cm, y, f"Email: {self.company_email}")
+            c.drawString(company_info_x, y, f"Email: {self.company_email}")
             y -= 0.5*cm
         if self.company_tax_id:
             c.drawString(8*cm, y, f"Tax ID: {self.company_tax_id}")
@@ -199,19 +248,24 @@ class ReceiptGenerator:
         c = canvas.Canvas(output_path, pagesize=A4)
         width, height = A4
 
-        # Draw logo if provided
+        # Header section with logo and company info side by side
         y_pos = height - 2*cm
+
+        # Logo on the left (if provided)
+        logo_x = 2*cm
+        company_info_x = 7*cm  # Company info starts here
+
         if self.logo_path and os.path.exists(self.logo_path):
             try:
                 img = Image.open(self.logo_path)
                 img_width, img_height = img.size
                 aspect = img_height / float(img_width)
-                logo_width = 3*cm
+                logo_width = 4*cm
                 logo_height = logo_width * aspect
-                if logo_height > 2*cm:
-                    logo_height = 2*cm
+                if logo_height > 3*cm:
+                    logo_height = 3*cm
                     logo_width = logo_height / aspect
-                c.drawImage(self.logo_path, 2*cm, y_pos - logo_height, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
+                c.drawImage(self.logo_path, logo_x, y_pos - logo_height, width=logo_width, height=logo_height, preserveAspectRatio=True, mask='auto')
             except:
                 pass
 
@@ -228,7 +282,7 @@ class ReceiptGenerator:
             c.drawString(8*cm, y, f"Phone: {self.company_phone}")
             y -= 0.5*cm
         if self.company_email:
-            c.drawString(8*cm, y, f"Email: {self.company_email}")
+            c.drawString(company_info_x, y, f"Email: {self.company_email}")
             y -= 0.5*cm
         if self.company_tax_id:
             c.drawString(8*cm, y, f"Tax ID: {self.company_tax_id}")
