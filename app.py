@@ -600,6 +600,9 @@ class CustomerProfileWindow(ctk.CTkToplevel):
         self.trans_tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
+        # Bind double-click to edit transaction
+        self.trans_tree.bind("<Double-1>", lambda e: self.edit_selected_transaction())
+
         # Load transactions
         for record in records:
             trans_id, service, notes, date, cost, status = record
