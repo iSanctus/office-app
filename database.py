@@ -29,6 +29,8 @@ def connect_db():
         tax_id TEXT,
         address TEXT,
         work_info TEXT,
+        taxis_username TEXT,
+        taxis_password TEXT,
         notes TEXT,
         created_date TEXT DEFAULT CURRENT_TIMESTAMP
     )""")
@@ -112,6 +114,16 @@ def connect_db():
 
     try:
         cursor.execute("ALTER TABLE customers ADD COLUMN notes TEXT")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE customers ADD COLUMN taxis_username TEXT")
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE customers ADD COLUMN taxis_password TEXT")
     except sqlite3.OperationalError:
         pass
 
@@ -305,7 +317,7 @@ def delete_transaction(transaction_id):
     conn.close()
 
 # --- Extended Customer Functions ---
-def update_customer_details(customer_id, name, email, phone, tax_id, address, work_info, notes):
+def update_customer_details(customer_id, name, email, phone, tax_id, address, work_info, taxis_username, taxis_password, notes):
     """ Updates full customer details """
     conn = connect_db()
     cursor = conn.cursor()
@@ -316,9 +328,9 @@ def update_customer_details(customer_id, name, email, phone, tax_id, address, wo
 
     cursor.execute("""
         UPDATE customers
-        SET name = ?, email = ?, phone = ?, tax_id = ?, address = ?, work_info = ?, notes = ?
+        SET name = ?, email = ?, phone = ?, tax_id = ?, address = ?, work_info = ?, taxis_username = ?, taxis_password = ?, notes = ?
         WHERE id = ?
-    """, (name, email, phone, tax_id, address, work_info, notes, customer_id))
+    """, (name, email, phone, tax_id, address, work_info, taxis_username, taxis_password, notes, customer_id))
     conn.commit()
 
     # Log the change
@@ -334,7 +346,7 @@ def get_customer_details(customer_id):
     conn = connect_db()
     cursor = conn.cursor()
     cursor.execute("""
-        SELECT id, name, email, phone, tax_id, address, work_info, notes, created_date
+        SELECT id, name, email, phone, tax_id, address, work_info, taxis_username, taxis_password, notes, created_date
         FROM customers WHERE id = ?
     """, (customer_id,))
     result = cursor.fetchone()
