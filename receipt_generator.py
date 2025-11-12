@@ -1,16 +1,19 @@
 # receipt_generator.py
 """
-PDF Receipt Generator for payment and collection receipts
+PDF Receipt Generator for payment and collection receipts with Greek support
 """
 import os
 from datetime import datetime
 from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.pdfgen import canvas
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib.utils import ImageReader
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from PIL import Image
+import sys
 
 # Register Greek-compatible fonts
 try:
@@ -64,12 +67,45 @@ class ReceiptGenerator:
         self.logo_path = logo_path
         self.signature_path = signature_path
 
-    def generate_payment_receipt(self, output_path, receipt_number, customer_name, amount, service_description, payment_date=None, notes=""):
+        # Try to register Greek-compatible fonts
+        self.greek_font = "Helvetica"
+        self.greek_font_bold = "Helvetica-Bold"
+
+        try:
+            # Try to find and register Arial font (supports Greek)
+            if sys.platform == "win32":
+                font_path = "C:\\Windows\\Fonts\\arial.ttf"
+                font_bold_path = "C:\\Windows\\Fonts\\arialbd.ttf"
+                if os.path.exists(font_path):
+                    pdfmetrics.registerFont(TTFont('ArialUnicode', font_path))
+                    self.greek_font = 'ArialUnicode'
+                if os.path.exists(font_bold_path):
+                    pdfmetrics.registerFont(TTFont('ArialUnicodeBold', font_bold_path))
+                    self.greek_font_bold = 'ArialUnicodeBold'
+        except:
+            # Fallback to Helvetica
+            pass
+
+    def _format_date(self, date_str):
+        """Convert date from YYYY-MM-DD to DD/MM/YY format"""
+        try:
+            if '/' in date_str:
+                # Already in DD/MM/YY format
+                return date_str
+            # Parse YYYY-MM-DD format
+            dt = datetime.strptime(date_str, '%Y-%m-%d')
+            return dt.strftime('%d/%m/%y')
+        except:
+            return date_str
+
+    def generate_payment_receipt(self, output_path, receipt_number, customer_name, amount, service_description, payment_date=None, notes="", custom_notes=""):
         """
         Generates a payment receipt (Απόδειξη Πληρωμής)
         """
         if payment_date is None:
             payment_date = datetime.now().strftime("%d/%m/%y")
+        else:
+            payment_date = self._format_date(payment_date)
 
         c = canvas.Canvas(output_path, pagesize=A4)
         width, height = A4
@@ -114,53 +150,53 @@ class ReceiptGenerator:
             c.drawString(company_info_x, y, f"ΑΦΜ: {self.company_tax_id}")
 
         # Receipt Title
-        c.setFont(FONT_BOLD, 20)
-        c.drawCentredString(width/2, height - 7*cm, "ΑΠΟΔΕΙΞΗ ΠΛΗΡΩΜΗΣ")
+        c.setFont(self.greek_font_bold, 20)
+        c.drawCentredString(width/2, height - 7*cm, "PAYMENT RECEIPT")
 
         # Receipt Number and Date
-        c.setFont(FONT_NAME, 11)
-        c.drawString(2*cm, height - 8.5*cm, f"Αριθμός Απόδειξης: {receipt_number}")
-        c.drawRightString(width - 2*cm, height - 8.5*cm, f"Ημερομηνία: {payment_date}")
+        c.setFont(self.greek_font, 11)
+        c.drawString(2*cm, height - 8.5*cm, f"Receipt No: {receipt_number}")
+        c.drawRightString(width - 2*cm, height - 8.5*cm, f"Date: {payment_date}")
 
         # Draw line
         c.line(2*cm, height - 9*cm, width - 2*cm, height - 9*cm)
 
         # Customer Information
         y = height - 10*cm
-        c.setFont(FONT_BOLD, 12)
-        c.drawString(2*cm, y, "Στοιχεία Πελάτη:")
+        c.setFont(self.greek_font_bold, 12)
+        c.drawString(2*cm, y, "Customer Details:")
         y -= 0.7*cm
-        c.setFont(FONT_NAME, 11)
-        c.drawString(2*cm, y, f"Όνομα: {customer_name}")
+        c.setFont(self.greek_font, 11)
+        c.drawString(2*cm, y, f"Name: {customer_name}")
 
         # Service and Amount
         y -= 1.5*cm
-        c.setFont(FONT_BOLD, 12)
-        c.drawString(2*cm, y, "Περιγραφή Υπηρεσίας:")
+        c.setFont(self.greek_font_bold, 12)
+        c.drawString(2*cm, y, "Service Description:")
         y -= 0.7*cm
-        c.setFont(FONT_NAME, 11)
+        c.setFont(self.greek_font, 11)
 
         # Wrap service description if too long
         max_width = width - 4*cm
-        lines = self._wrap_text(service_description, max_width, c, FONT_NAME, 11)
+        lines = self._wrap_text(service_description, max_width, c, self.greek_font, 11)
         for line in lines:
             c.drawString(2*cm, y, line)
             y -= 0.5*cm
 
         # Amount Box
         y -= 1*cm
-        c.setFont(FONT_BOLD, 14)
-        c.drawString(2*cm, y, "Ποσό Πληρωμής:")
-        c.drawRightString(width - 2*cm, y, f"{amount:.2f} €")
+        c.setFont(self.greek_font_bold, 14)
+        c.drawString(2*cm, y, "Payment Amount:")
+        c.drawRightString(width - 2*cm, y, f"{amount:.2f} EUR")
 
-        # Notes if provided
+        # Transaction Notes (from database)
         if notes:
             y -= 1.5*cm
-            c.setFont(FONT_BOLD, 11)
-            c.drawString(2*cm, y, "Παρατηρήσεις:")
+            c.setFont(self.greek_font_bold, 11)
+            c.drawString(2*cm, y, "Transaction Notes:")
             y -= 0.6*cm
-            c.setFont(FONT_NAME, 10)
-            notes_lines = self._wrap_text(notes, max_width, c, FONT_NAME, 10)
+            c.setFont(self.greek_font, 10)
+            notes_lines = self._wrap_text(notes, max_width, c, self.greek_font, 10)
             for line in notes_lines:
                 c.drawString(2*cm, y, line)
                 y -= 0.5*cm
@@ -187,18 +223,20 @@ class ReceiptGenerator:
         c.drawCentredString(width - 6*cm, sig_y - 0.5*cm, "Υπογραφή / Σφραγίδα Πελάτη")
 
         # Footer
-        c.setFont(FONT_OBLIQUE, 8)
-        c.drawCentredString(width/2, 1.5*cm, "Ευχαριστούμε για την προτίμησή σας!")
+        c.setFont(self.greek_font, 8)
+        c.drawCentredString(width/2, 1.5*cm, "Thank you for your business!")
 
         c.save()
         return output_path
 
-    def generate_collection_receipt(self, output_path, receipt_number, customer_name, amount, service_description, collection_date=None, notes=""):
+    def generate_collection_receipt(self, output_path, receipt_number, customer_name, amount, service_description, collection_date=None, notes="", custom_notes=""):
         """
         Generates a collection receipt (Απόδειξη Είσπραξης)
         """
         if collection_date is None:
             collection_date = datetime.now().strftime("%d/%m/%y")
+        else:
+            collection_date = self._format_date(collection_date)
 
         c = canvas.Canvas(output_path, pagesize=A4)
         width, height = A4
@@ -228,7 +266,7 @@ class ReceiptGenerator:
         c.setFont(FONT_BOLD, 16)
         c.drawString(company_info_x, height - 2.5*cm, self.company_name if self.company_name else "Επωνυμία Εταιρείας")
 
-        c.setFont(FONT_NAME, 10)
+        c.setFont(self.greek_font, 10)
         y = height - 3.2*cm
         if self.company_address:
             c.drawString(company_info_x, y, f"Διεύθυνση: {self.company_address}")
@@ -243,53 +281,53 @@ class ReceiptGenerator:
             c.drawString(company_info_x, y, f"ΑΦΜ: {self.company_tax_id}")
 
         # Receipt Title
-        c.setFont(FONT_BOLD, 20)
-        c.drawCentredString(width/2, height - 7*cm, "ΑΠΟΔΕΙΞΗ ΕΙΣΠΡΑΞΗΣ")
+        c.setFont(self.greek_font_bold, 20)
+        c.drawCentredString(width/2, height - 7*cm, "COLLECTION RECEIPT")
 
         # Receipt Number and Date
-        c.setFont(FONT_NAME, 11)
-        c.drawString(2*cm, height - 8.5*cm, f"Αριθμός Απόδειξης: {receipt_number}")
-        c.drawRightString(width - 2*cm, height - 8.5*cm, f"Ημερομηνία: {collection_date}")
+        c.setFont(self.greek_font, 11)
+        c.drawString(2*cm, height - 8.5*cm, f"Receipt No: {receipt_number}")
+        c.drawRightString(width - 2*cm, height - 8.5*cm, f"Date: {collection_date}")
 
         # Draw line
         c.line(2*cm, height - 9*cm, width - 2*cm, height - 9*cm)
 
         # Customer Information
         y = height - 10*cm
-        c.setFont(FONT_BOLD, 12)
-        c.drawString(2*cm, y, "Είσπραξη από:")
+        c.setFont(self.greek_font_bold, 12)
+        c.drawString(2*cm, y, "Collected from:")
         y -= 0.7*cm
-        c.setFont(FONT_NAME, 11)
-        c.drawString(2*cm, y, f"Όνομα: {customer_name}")
+        c.setFont(self.greek_font, 11)
+        c.drawString(2*cm, y, f"Name: {customer_name}")
 
         # Service and Amount
         y -= 1.5*cm
-        c.setFont(FONT_BOLD, 12)
-        c.drawString(2*cm, y, "Περιγραφή:")
+        c.setFont(self.greek_font_bold, 12)
+        c.drawString(2*cm, y, "Description:")
         y -= 0.7*cm
-        c.setFont(FONT_NAME, 11)
+        c.setFont(self.greek_font, 11)
 
         # Wrap service description if too long
         max_width = width - 4*cm
-        lines = self._wrap_text(service_description, max_width, c, FONT_NAME, 11)
+        lines = self._wrap_text(service_description, max_width, c, self.greek_font, 11)
         for line in lines:
             c.drawString(2*cm, y, line)
             y -= 0.5*cm
 
         # Amount Box
         y -= 1*cm
-        c.setFont(FONT_BOLD, 14)
-        c.drawString(2*cm, y, "Ποσό Είσπραξης:")
-        c.drawRightString(width - 2*cm, y, f"{amount:.2f} €")
+        c.setFont(self.greek_font_bold, 14)
+        c.drawString(2*cm, y, "Collection Amount:")
+        c.drawRightString(width - 2*cm, y, f"{amount:.2f} EUR")
 
-        # Notes if provided
+        # Transaction Notes (from database)
         if notes:
             y -= 1.5*cm
-            c.setFont(FONT_BOLD, 11)
-            c.drawString(2*cm, y, "Παρατηρήσεις:")
+            c.setFont(self.greek_font_bold, 11)
+            c.drawString(2*cm, y, "Transaction Notes:")
             y -= 0.6*cm
-            c.setFont(FONT_NAME, 10)
-            notes_lines = self._wrap_text(notes, max_width, c, FONT_NAME, 10)
+            c.setFont(self.greek_font, 10)
+            notes_lines = self._wrap_text(notes, max_width, c, self.greek_font, 10)
             for line in notes_lines:
                 c.drawString(2*cm, y, line)
                 y -= 0.5*cm
@@ -316,8 +354,8 @@ class ReceiptGenerator:
         c.drawCentredString(width - 6*cm, sig_y - 0.5*cm, "Υπογραφή / Σφραγίδα Πελάτη")
 
         # Footer
-        c.setFont(FONT_OBLIQUE, 8)
-        c.drawCentredString(width/2, 1.5*cm, "Ευχαριστούμε για την συνεργασία!")
+        c.setFont(self.greek_font, 8)
+        c.drawCentredString(width/2, 1.5*cm, "Thank you for your cooperation!")
 
         c.save()
         return output_path
