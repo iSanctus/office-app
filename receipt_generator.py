@@ -8,7 +8,51 @@ from reportlab.lib.pagesizes import A4
 from reportlab.lib.units import cm
 from reportlab.pdfgen import canvas
 from reportlab.lib.utils import ImageReader
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
 from PIL import Image
+
+# Register Greek-compatible fonts
+try:
+    # Try to register DejaVu fonts (common on most systems)
+    pdfmetrics.registerFont(TTFont('DejaVuSans', 'DejaVuSans.ttf'))
+    pdfmetrics.registerFont(TTFont('DejaVuSans-Bold', 'DejaVuSans-Bold.ttf'))
+    pdfmetrics.registerFont(TTFont('DejaVuSans-Oblique', 'DejaVuSans-Oblique.ttf'))
+    FONT_NAME = 'DejaVuSans'
+    FONT_BOLD = 'DejaVuSans-Bold'
+    FONT_OBLIQUE = 'DejaVuSans-Oblique'
+except:
+    # If DejaVu not found, try to find fonts in common locations
+    import platform
+    system = platform.system()
+
+    try:
+        if system == 'Windows':
+            # Try Arial Unicode MS or other Windows fonts that support Greek
+            pdfmetrics.registerFont(TTFont('Arial', 'C:\\Windows\\Fonts\\arial.ttf'))
+            pdfmetrics.registerFont(TTFont('Arial-Bold', 'C:\\Windows\\Fonts\\arialbd.ttf'))
+            pdfmetrics.registerFont(TTFont('Arial-Oblique', 'C:\\Windows\\Fonts\\ariali.ttf'))
+            FONT_NAME = 'Arial'
+            FONT_BOLD = 'Arial-Bold'
+            FONT_OBLIQUE = 'Arial-Oblique'
+        elif system == 'Linux':
+            # Try Liberation Sans on Linux
+            pdfmetrics.registerFont(TTFont('LiberationSans', '/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf'))
+            pdfmetrics.registerFont(TTFont('LiberationSans-Bold', '/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf'))
+            pdfmetrics.registerFont(TTFont('LiberationSans-Oblique', '/usr/share/fonts/truetype/liberation/LiberationSans-Italic.ttf'))
+            FONT_NAME = 'LiberationSans'
+            FONT_BOLD = 'LiberationSans-Bold'
+            FONT_OBLIQUE = 'LiberationSans-Oblique'
+        else:
+            # MacOS or fallback
+            FONT_NAME = 'Helvetica'
+            FONT_BOLD = 'Helvetica-Bold'
+            FONT_OBLIQUE = 'Helvetica-Oblique'
+    except:
+        # Final fallback to Helvetica (won't show Greek properly but won't crash)
+        FONT_NAME = 'Helvetica'
+        FONT_BOLD = 'Helvetica-Bold'
+        FONT_OBLIQUE = 'Helvetica-Oblique'
 
 class ReceiptGenerator:
     def __init__(self, company_name="", company_address="", company_phone="", company_email="", company_tax_id="", logo_path=None, signature_path=None):
@@ -25,7 +69,7 @@ class ReceiptGenerator:
         Generates a payment receipt (Απόδειξη Πληρωμής)
         """
         if payment_date is None:
-            payment_date = datetime.now().strftime("%d/%m/%Y")
+            payment_date = datetime.now().strftime("%d/%m/%y")
 
         c = canvas.Canvas(output_path, pagesize=A4)
         width, height = A4
@@ -65,11 +109,11 @@ class ReceiptGenerator:
             c.drawString(8*cm, y, f"ΑΦΜ: {self.company_tax_id}")
 
         # Receipt Title
-        c.setFont("Helvetica-Bold", 20)
+        c.setFont(FONT_BOLD, 20)
         c.drawCentredString(width/2, height - 7*cm, "ΑΠΟΔΕΙΞΗ ΠΛΗΡΩΜΗΣ")
 
         # Receipt Number and Date
-        c.setFont("Helvetica", 11)
+        c.setFont(FONT_NAME, 11)
         c.drawString(2*cm, height - 8.5*cm, f"Αριθμός Απόδειξης: {receipt_number}")
         c.drawRightString(width - 2*cm, height - 8.5*cm, f"Ημερομηνία: {payment_date}")
 
@@ -78,40 +122,40 @@ class ReceiptGenerator:
 
         # Customer Information
         y = height - 10*cm
-        c.setFont("Helvetica-Bold", 12)
+        c.setFont(FONT_BOLD, 12)
         c.drawString(2*cm, y, "Στοιχεία Πελάτη:")
         y -= 0.7*cm
-        c.setFont("Helvetica", 11)
+        c.setFont(FONT_NAME, 11)
         c.drawString(2*cm, y, f"Όνομα: {customer_name}")
 
         # Service and Amount
         y -= 1.5*cm
-        c.setFont("Helvetica-Bold", 12)
+        c.setFont(FONT_BOLD, 12)
         c.drawString(2*cm, y, "Περιγραφή Υπηρεσίας:")
         y -= 0.7*cm
-        c.setFont("Helvetica", 11)
+        c.setFont(FONT_NAME, 11)
 
         # Wrap service description if too long
         max_width = width - 4*cm
-        lines = self._wrap_text(service_description, max_width, c, "Helvetica", 11)
+        lines = self._wrap_text(service_description, max_width, c, FONT_NAME, 11)
         for line in lines:
             c.drawString(2*cm, y, line)
             y -= 0.5*cm
 
         # Amount Box
         y -= 1*cm
-        c.setFont("Helvetica-Bold", 14)
+        c.setFont(FONT_BOLD, 14)
         c.drawString(2*cm, y, "Ποσό Πληρωμής:")
         c.drawRightString(width - 2*cm, y, f"{amount:.2f} €")
 
         # Notes if provided
         if notes:
             y -= 1.5*cm
-            c.setFont("Helvetica-Bold", 11)
+            c.setFont(FONT_BOLD, 11)
             c.drawString(2*cm, y, "Παρατηρήσεις:")
             y -= 0.6*cm
-            c.setFont("Helvetica", 10)
-            notes_lines = self._wrap_text(notes, max_width, c, "Helvetica", 10)
+            c.setFont(FONT_NAME, 10)
+            notes_lines = self._wrap_text(notes, max_width, c, FONT_NAME, 10)
             for line in notes_lines:
                 c.drawString(2*cm, y, line)
                 y -= 0.5*cm
@@ -121,7 +165,7 @@ class ReceiptGenerator:
             try:
                 sig_y = 5*cm
                 c.drawImage(self.signature_path, width - 8*cm, sig_y, width=4*cm, height=2*cm, preserveAspectRatio=True, mask='auto')
-                c.setFont("Helvetica", 9)
+                c.setFont(FONT_NAME, 9)
                 c.drawCentredString(width - 6*cm, sig_y - 0.5*cm, "Υπογραφή / Σφραγίδα")
             except:
                 pass
@@ -129,11 +173,11 @@ class ReceiptGenerator:
             # Signature line
             sig_y = 5*cm
             c.line(width - 8*cm, sig_y, width - 4*cm, sig_y)
-            c.setFont("Helvetica", 9)
+            c.setFont(FONT_NAME, 9)
             c.drawCentredString(width - 6*cm, sig_y - 0.5*cm, "Υπογραφή / Σφραγίδα")
 
         # Footer
-        c.setFont("Helvetica-Oblique", 8)
+        c.setFont(FONT_OBLIQUE, 8)
         c.drawCentredString(width/2, 1.5*cm, "Ευχαριστούμε για την προτίμησή σας!")
 
         c.save()
@@ -144,7 +188,7 @@ class ReceiptGenerator:
         Generates a collection receipt (Απόδειξη Είσπραξης)
         """
         if collection_date is None:
-            collection_date = datetime.now().strftime("%d/%m/%Y")
+            collection_date = datetime.now().strftime("%d/%m/%y")
 
         c = canvas.Canvas(output_path, pagesize=A4)
         width, height = A4
@@ -166,10 +210,10 @@ class ReceiptGenerator:
                 pass
 
         # Company Header
-        c.setFont("Helvetica-Bold", 16)
+        c.setFont(FONT_BOLD, 16)
         c.drawString(8*cm, height - 2.5*cm, self.company_name if self.company_name else "Επωνυμία Εταιρείας")
 
-        c.setFont("Helvetica", 10)
+        c.setFont(FONT_NAME, 10)
         y = height - 3.2*cm
         if self.company_address:
             c.drawString(8*cm, y, f"Διεύθυνση: {self.company_address}")
@@ -184,11 +228,11 @@ class ReceiptGenerator:
             c.drawString(8*cm, y, f"ΑΦΜ: {self.company_tax_id}")
 
         # Receipt Title
-        c.setFont("Helvetica-Bold", 20)
+        c.setFont(FONT_BOLD, 20)
         c.drawCentredString(width/2, height - 7*cm, "ΑΠΟΔΕΙΞΗ ΕΙΣΠΡΑΞΗΣ")
 
         # Receipt Number and Date
-        c.setFont("Helvetica", 11)
+        c.setFont(FONT_NAME, 11)
         c.drawString(2*cm, height - 8.5*cm, f"Αριθμός Απόδειξης: {receipt_number}")
         c.drawRightString(width - 2*cm, height - 8.5*cm, f"Ημερομηνία: {collection_date}")
 
@@ -197,40 +241,40 @@ class ReceiptGenerator:
 
         # Customer Information
         y = height - 10*cm
-        c.setFont("Helvetica-Bold", 12)
+        c.setFont(FONT_BOLD, 12)
         c.drawString(2*cm, y, "Είσπραξη από:")
         y -= 0.7*cm
-        c.setFont("Helvetica", 11)
+        c.setFont(FONT_NAME, 11)
         c.drawString(2*cm, y, f"Όνομα: {customer_name}")
 
         # Service and Amount
         y -= 1.5*cm
-        c.setFont("Helvetica-Bold", 12)
+        c.setFont(FONT_BOLD, 12)
         c.drawString(2*cm, y, "Περιγραφή:")
         y -= 0.7*cm
-        c.setFont("Helvetica", 11)
+        c.setFont(FONT_NAME, 11)
 
         # Wrap service description if too long
         max_width = width - 4*cm
-        lines = self._wrap_text(service_description, max_width, c, "Helvetica", 11)
+        lines = self._wrap_text(service_description, max_width, c, FONT_NAME, 11)
         for line in lines:
             c.drawString(2*cm, y, line)
             y -= 0.5*cm
 
         # Amount Box
         y -= 1*cm
-        c.setFont("Helvetica-Bold", 14)
+        c.setFont(FONT_BOLD, 14)
         c.drawString(2*cm, y, "Ποσό Είσπραξης:")
         c.drawRightString(width - 2*cm, y, f"{amount:.2f} €")
 
         # Notes if provided
         if notes:
             y -= 1.5*cm
-            c.setFont("Helvetica-Bold", 11)
+            c.setFont(FONT_BOLD, 11)
             c.drawString(2*cm, y, "Παρατηρήσεις:")
             y -= 0.6*cm
-            c.setFont("Helvetica", 10)
-            notes_lines = self._wrap_text(notes, max_width, c, "Helvetica", 10)
+            c.setFont(FONT_NAME, 10)
+            notes_lines = self._wrap_text(notes, max_width, c, FONT_NAME, 10)
             for line in notes_lines:
                 c.drawString(2*cm, y, line)
                 y -= 0.5*cm
@@ -240,6 +284,7 @@ class ReceiptGenerator:
             try:
                 sig_y = 5*cm
                 c.drawImage(self.signature_path, width - 8*cm, sig_y, width=4*cm, height=2*cm, preserveAspectRatio=True, mask='auto')
+                c.setFont(FONT_NAME, 9)
                 c.drawCentredString(width - 6*cm, sig_y - 0.5*cm, "Υπογραφή / Σφραγίδα")
             except:
                 pass
@@ -247,11 +292,11 @@ class ReceiptGenerator:
             # Signature line
             sig_y = 5*cm
             c.line(width - 8*cm, sig_y, width - 4*cm, sig_y)
-            c.setFont("Helvetica", 9)
+            c.setFont(FONT_NAME, 9)
             c.drawCentredString(width - 6*cm, sig_y - 0.5*cm, "Υπογραφή / Σφραγίδα")
 
         # Footer
-        c.setFont("Helvetica-Oblique", 8)
+        c.setFont(FONT_OBLIQUE, 8)
         c.drawCentredString(width/2, 1.5*cm, "Ευχαριστούμε για την συνεργασία!")
 
         c.save()

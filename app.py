@@ -14,6 +14,21 @@ from receipt_generator import ReceiptGenerator
 ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
+# ========== HELPER FUNCTIONS ==========
+
+def format_date(date_str):
+    """Convert date from YYYY-MM-DD to dd/mm/yy format"""
+    try:
+        if not date_str:
+            return ""
+        # Parse the date string
+        date_obj = datetime.datetime.strptime(str(date_str), '%Y-%m-%d')
+        # Format as dd/mm/yy
+        return date_obj.strftime('%d/%m/%y')
+    except:
+        # If parsing fails, return original
+        return str(date_str)
+
 # ========== DIALOG WINDOWS ==========
 
 class EditTransactionWindow(ctk.CTkToplevel):
@@ -52,7 +67,7 @@ class EditTransactionWindow(ctk.CTkToplevel):
         self.status_menu = ctk.CTkOptionMenu(
             main_frame,
             variable=self.status_var,
-            values=["Εκκρεμεί", "Πληρώθηκε", "Καθυστέρηση"]
+            values=["Εκκρεμεί", "Πληρώθηκε"]
         )
         self.status_menu.pack(fill="x", pady=(0, 10))
 
@@ -271,7 +286,8 @@ class CustomerProfileWindow(ctk.CTkToplevel):
         for record in records:
             trans_id, service, notes, date, cost, status = record
             tag = 'paid' if status == 'Πληρώθηκε' else 'unpaid'
-            self.trans_tree.insert("", "end", values=(trans_id, service, date, f"{cost:.2f} €", status), tags=(tag,))
+            formatted_date = format_date(date)
+            self.trans_tree.insert("", "end", values=(trans_id, service, formatted_date, f"{cost:.2f} €", status), tags=(tag,))
 
         # Transaction actions
         actions_frame = ctk.CTkFrame(trans_frame, fg_color="transparent")
@@ -388,12 +404,12 @@ class CustomerProfileWindow(ctk.CTkToplevel):
 
         trans_id = self.trans_tree.item(selected[0])['values'][0]
         service = self.trans_tree.item(selected[0])['values'][1]
-        date = self.trans_tree.item(selected[0])['values'][2]
+        date_formatted = self.trans_tree.item(selected[0])['values'][2]  # This is already in dd/mm/yy format
         amount_str = self.trans_tree.item(selected[0])['values'][3]
         amount = float(amount_str.replace(' €', '').replace(',', '.'))
 
         # Show receipt options dialog
-        ReceiptOptionsWindow(self, trans_id, self.customer_name, service, amount, date)
+        ReceiptOptionsWindow(self, trans_id, self.customer_name, service, amount, date_formatted)
 
 
 class ReceiptOptionsWindow(ctk.CTkToplevel):
@@ -524,6 +540,16 @@ class ReceiptOptionsWindow(ctk.CTkToplevel):
         )
         save_settings_check.pack(padx=15, pady=(0, 15), anchor="w")
 
+        # Comments Section
+        comments_frame = ctk.CTkFrame(main_frame)
+        comments_frame.pack(fill="x", pady=(0, 15))
+
+        comments_label = ctk.CTkLabel(comments_frame, text="💬 Σχόλια για την Απόδειξη:", font=ctk.CTkFont(weight="bold", size=14))
+        comments_label.pack(pady=(15, 10), padx=15, anchor="w")
+
+        self.receipt_comments_textbox = ctk.CTkTextbox(comments_frame, height=80)
+        self.receipt_comments_textbox.pack(fill="x", padx=15, pady=(0, 15))
+
         # Generate Button
         generate_btn = ctk.CTkButton(
             main_frame,
@@ -601,6 +627,9 @@ class ReceiptOptionsWindow(ctk.CTkToplevel):
         if not output_path:
             return
 
+        # Get comments from textbox
+        receipt_comments = self.receipt_comments_textbox.get("1.0", "end-1c").strip()
+
         # Create receipt generator
         generator = ReceiptGenerator(
             company_name=company_name,
@@ -620,7 +649,8 @@ class ReceiptOptionsWindow(ctk.CTkToplevel):
                     self.customer_name,
                     self.amount,
                     self.service,
-                    payment_date=self.date
+                    payment_date=self.date,
+                    notes=receipt_comments
                 )
             else:
                 generator.generate_collection_receipt(
@@ -629,7 +659,8 @@ class ReceiptOptionsWindow(ctk.CTkToplevel):
                     self.customer_name,
                     self.amount,
                     self.service,
-                    collection_date=self.date
+                    collection_date=self.date,
+                    notes=receipt_comments
                 )
 
             messagebox.showinfo("Επιτυχία", f"Η απόδειξη δημιουργήθηκε επιτυχώς!\n\n{output_path}", parent=self)
@@ -748,7 +779,7 @@ class App(ctk.CTk):
         self.status_menu = ctk.CTkOptionMenu(
             left_panel,
             variable=self.status_var,
-            values=["Εκκρεμεί", "Πληρώθηκε", "Καθυστέρηση"],
+            values=["Εκκρεμεί", "Πληρώθηκε"],
             height=40
         )
         self.status_menu.pack(fill="x", padx=20, pady=(0, 15))
@@ -808,7 +839,7 @@ class App(ctk.CTk):
         filter_menu = ctk.CTkOptionMenu(
             filter_frame,
             variable=self.filter_var,
-            values=["Όλα", "Εκκρεμεί", "Πληρώθηκε", "Καθυστέρηση"],
+            values=["Όλα", "Εκκρεμεί", "Πληρώθηκε"],
             command=self.refresh_main_table,
             width=150
         )
@@ -972,7 +1003,8 @@ class App(ctk.CTk):
         for record in records:
             trans_id, customer, service, notes, date, amount, status = record
             tag = 'paid' if status == 'Πληρώθηκε' else 'unpaid'
-            self.tree.insert("", "end", values=(trans_id, customer, service, notes, date, f"{amount:.2f} €", status), tags=(tag,))
+            formatted_date = format_date(date)
+            self.tree.insert("", "end", values=(trans_id, customer, service, notes, formatted_date, f"{amount:.2f} €", status), tags=(tag,))
 
     def on_tree_double_click(self, event):
         """Handle double-click on transaction"""
@@ -1442,7 +1474,7 @@ class App(ctk.CTk):
                     cost_pre_vat_float = cost_final_float / 1.24
 
                     # Validate status
-                    valid_statuses = ["Εκκρεμεί", "Πληρώθηκε", "Καθυστέρηση"]
+                    valid_statuses = ["Εκκρεμεί", "Πληρώθηκε"]
                     if status not in valid_statuses:
                         raise ValueError(f"Κατάσταση '{status}' μη έγκυρη")
 
