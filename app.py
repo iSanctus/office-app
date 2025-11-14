@@ -68,6 +68,8 @@ class CustomerSelectionDialog(ctk.CTkToplevel):
         self.geometry("500x600")
         self.transient(master)
         self.grab_set()
+        self.lift()
+        self.focus_force()
 
         # Main frame
         main_frame = ctk.CTkFrame(self)
@@ -199,6 +201,8 @@ class EditTransactionWindow(ctk.CTkToplevel):
         self.geometry("650x800")
         self.transient(master)
         self.grab_set()
+        self.lift()
+        self.focus_force()
 
         # Get transaction details
         _id, current_notes, current_status = db.get_transaction_details(self.transaction_id)
@@ -474,6 +478,9 @@ class CustomerProfileWindow(ctk.CTkToplevel):
 
         self.title(f"Προφίλ Πελάτη - {customer_name}")
         self.geometry("900x700")
+        self.transient(master)
+        self.lift()
+        self.focus_force()
 
         # Get customer ID and details
         self.customer_id = db.get_customer_id_by_name(customer_name)
@@ -804,6 +811,8 @@ class ReceiptOptionsWindow(ctk.CTkToplevel):
         self.geometry("600x700")
         self.transient(master)
         self.grab_set()
+        self.lift()
+        self.focus_force()
 
         # Main frame
         main_frame = ctk.CTkScrollableFrame(self)
@@ -998,14 +1007,15 @@ class ReceiptOptionsWindow(ctk.CTkToplevel):
             defaultextension=".pdf",
             filetypes=[("PDF files", "*.pdf")],
             initialfile=default_filename,
-            title="Αποθήκευση Απόδειξης"
+            title="Αποθήκευση Απόδειξης",
+            parent=self
         )
 
         if not output_path:
             return
 
-        # Get comments from textbox
-        receipt_comments = self.receipt_comments_textbox.get("1.0", "end-1c").strip()
+        # Get custom notes from textbox
+        custom_notes = self.receipt_notes_textbox.get("1.0", "end-1c").strip()
 
         # Create receipt generator
         generator = ReceiptGenerator(
@@ -1017,9 +1027,6 @@ class ReceiptOptionsWindow(ctk.CTkToplevel):
             logo_path=self.logo_path.get() if self.logo_path.get() else None,
             signature_path=self.signature_path.get() if self.signature_path.get() else None
         )
-
-        # Get custom notes from textbox
-        custom_notes = self.receipt_notes_textbox.get("1.0", "end-1c").strip()
 
         try:
             receipt_type_text = "Απόδειξη Πληρωμής" if self.receipt_type.get() == "payment" else "Απόδειξη Είσπραξης"
