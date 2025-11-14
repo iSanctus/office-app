@@ -6,12 +6,37 @@ import datetime
 import shutil
 import os
 import csv
+import json
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
 from receipt_generator import ReceiptGenerator
 
-# Set appearance mode and color theme
-ctk.set_appearance_mode("dark")
+# Settings file path
+SETTINGS_FILE = os.path.join(os.path.dirname(__file__), "app_settings.json")
+
+# Load user settings
+def load_settings():
+    """Load application settings"""
+    default_settings = {"theme": "dark"}
+    try:
+        if os.path.exists(SETTINGS_FILE):
+            with open(SETTINGS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+    except:
+        pass
+    return default_settings
+
+def save_settings(settings):
+    """Save application settings"""
+    try:
+        with open(SETTINGS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(settings, f, ensure_ascii=False, indent=2)
+    except:
+        pass
+
+# Load settings and apply theme
+user_settings = load_settings()
+ctk.set_appearance_mode(user_settings.get("theme", "dark"))
 ctk.set_default_color_theme("blue")
 
 # ========== HELPER FUNCTIONS ==========
@@ -1064,6 +1089,31 @@ class App(ctk.CTk):
         # State variables
         self.current_customer_records = []
         self.current_customer_name = None
+        self.user_settings = load_settings()
+        self.current_theme = self.user_settings.get("theme", "dark")  # Track current theme
+
+        # Header frame with title and theme toggle
+        header_frame = ctk.CTkFrame(self, fg_color="transparent")
+        header_frame.pack(fill="x", padx=15, pady=(10, 0))
+
+        # App title
+        title_label = ctk.CTkLabel(
+            header_frame,
+            text="Σύστημα Διαχείρισης Έργων v8.0",
+            font=ctk.CTkFont(size=18, weight="bold")
+        )
+        title_label.pack(side="left")
+
+        # Theme toggle button
+        theme_text = "🌙 Σκούρο Θέμα" if self.current_theme == "dark" else "☀️ Φωτεινό Θέμα"
+        self.theme_button = ctk.CTkButton(
+            header_frame,
+            text=theme_text,
+            command=self.toggle_theme,
+            width=140,
+            height=32
+        )
+        self.theme_button.pack(side="right")
 
         # Create tab view
         self.tab_view = ctk.CTkTabview(self)
@@ -2143,6 +2193,23 @@ class App(ctk.CTk):
             log_id, action, table, record_id, description, old_val, new_val, timestamp = log
             tag = action.lower()
             self.log_tree.insert("", "end", values=(log_id, action, table, description, timestamp), tags=(tag,))
+
+    # ========== THEME TOGGLE ==========
+
+    def toggle_theme(self):
+        """Toggle between dark and light theme"""
+        if self.current_theme == "dark":
+            ctk.set_appearance_mode("light")
+            self.current_theme = "light"
+            self.theme_button.configure(text="☀️ Φωτεινό Θέμα")
+        else:
+            ctk.set_appearance_mode("dark")
+            self.current_theme = "dark"
+            self.theme_button.configure(text="🌙 Σκούρο Θέμα")
+
+        # Save preference
+        self.user_settings["theme"] = self.current_theme
+        save_settings(self.user_settings)
 
 
 # ========== RUN APPLICATION ==========
