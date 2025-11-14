@@ -151,12 +151,12 @@ class ReceiptGenerator:
 
         # Receipt Title
         c.setFont(self.greek_font_bold, 20)
-        c.drawCentredString(width/2, height - 7*cm, "PAYMENT RECEIPT")
+        c.drawCentredString(width/2, height - 7*cm, "ΑΠΟΔΕΙΞΗ ΠΛΗΡΩΜΗΣ")
 
         # Receipt Number and Date
         c.setFont(self.greek_font, 11)
-        c.drawString(2*cm, height - 8.5*cm, f"Receipt No: {receipt_number}")
-        c.drawRightString(width - 2*cm, height - 8.5*cm, f"Date: {payment_date}")
+        c.drawString(2*cm, height - 8.5*cm, f"Αριθμός Απόδειξης: {receipt_number}")
+        c.drawRightString(width - 2*cm, height - 8.5*cm, f"Ημερομηνία: {payment_date}")
 
         # Draw line
         c.line(2*cm, height - 9*cm, width - 2*cm, height - 9*cm)
@@ -164,15 +164,15 @@ class ReceiptGenerator:
         # Customer Information
         y = height - 10*cm
         c.setFont(self.greek_font_bold, 12)
-        c.drawString(2*cm, y, "Customer Details:")
+        c.drawString(2*cm, y, "Στοιχεία Πελάτη:")
         y -= 0.7*cm
         c.setFont(self.greek_font, 11)
-        c.drawString(2*cm, y, f"Name: {customer_name}")
+        c.drawString(2*cm, y, f"Όνομα: {customer_name}")
 
         # Service and Amount
         y -= 1.5*cm
         c.setFont(self.greek_font_bold, 12)
-        c.drawString(2*cm, y, "Service Description:")
+        c.drawString(2*cm, y, "Περιγραφή Υπηρεσίας:")
         y -= 0.7*cm
         c.setFont(self.greek_font, 11)
 
@@ -186,14 +186,14 @@ class ReceiptGenerator:
         # Amount Box
         y -= 1*cm
         c.setFont(self.greek_font_bold, 14)
-        c.drawString(2*cm, y, "Payment Amount:")
-        c.drawRightString(width - 2*cm, y, f"{amount:.2f} EUR")
+        c.drawString(2*cm, y, "Ποσό Πληρωμής:")
+        c.drawRightString(width - 2*cm, y, f"{amount:.2f} €")
 
         # Transaction Notes (from database)
         if notes:
             y -= 1.5*cm
             c.setFont(self.greek_font_bold, 11)
-            c.drawString(2*cm, y, "Transaction Notes:")
+            c.drawString(2*cm, y, "Παρατηρήσεις:")
             y -= 0.6*cm
             c.setFont(self.greek_font, 10)
             notes_lines = self._wrap_text(notes, max_width, c, self.greek_font, 10)
@@ -207,7 +207,7 @@ class ReceiptGenerator:
         # Left signature (Engineer/Company)
         if self.signature_path and os.path.exists(self.signature_path):
             try:
-                c.drawImage(self.signature_path, 2*cm, sig_y, width=4*cm, height=2*cm, preserveAspectRatio=True, mask='auto')
+                c.drawImage(self.signature_path, 2*cm, sig_y, width=6*cm, height=3.5*cm, preserveAspectRatio=True, mask='auto')
             except:
                 pass
         else:
@@ -224,7 +224,7 @@ class ReceiptGenerator:
 
         # Footer
         c.setFont(self.greek_font, 8)
-        c.drawCentredString(width/2, 1.5*cm, "Thank you for your business!")
+        c.drawCentredString(width/2, 1.5*cm, "Ευχαριστούμε για τη συνεργασία!")
 
         c.save()
         return output_path
@@ -282,12 +282,12 @@ class ReceiptGenerator:
 
         # Receipt Title
         c.setFont(self.greek_font_bold, 20)
-        c.drawCentredString(width/2, height - 7*cm, "COLLECTION RECEIPT")
+        c.drawCentredString(width/2, height - 7*cm, "ΑΠΟΔΕΙΞΗ ΕΙΣΠΡΑΞΗΣ")
 
         # Receipt Number and Date
         c.setFont(self.greek_font, 11)
-        c.drawString(2*cm, height - 8.5*cm, f"Receipt No: {receipt_number}")
-        c.drawRightString(width - 2*cm, height - 8.5*cm, f"Date: {collection_date}")
+        c.drawString(2*cm, height - 8.5*cm, f"Αριθμός Απόδειξης: {receipt_number}")
+        c.drawRightString(width - 2*cm, height - 8.5*cm, f"Ημερομηνία: {collection_date}")
 
         # Draw line
         c.line(2*cm, height - 9*cm, width - 2*cm, height - 9*cm)
@@ -295,15 +295,15 @@ class ReceiptGenerator:
         # Customer Information
         y = height - 10*cm
         c.setFont(self.greek_font_bold, 12)
-        c.drawString(2*cm, y, "Collected from:")
+        c.drawString(2*cm, y, "Είσπραξη από:")
         y -= 0.7*cm
         c.setFont(self.greek_font, 11)
-        c.drawString(2*cm, y, f"Name: {customer_name}")
+        c.drawString(2*cm, y, f"Όνομα: {customer_name}")
 
         # Service and Amount
         y -= 1.5*cm
         c.setFont(self.greek_font_bold, 12)
-        c.drawString(2*cm, y, "Description:")
+        c.drawString(2*cm, y, "Περιγραφή:")
         y -= 0.7*cm
         c.setFont(self.greek_font, 11)
 
@@ -317,14 +317,14 @@ class ReceiptGenerator:
         # Amount Box
         y -= 1*cm
         c.setFont(self.greek_font_bold, 14)
-        c.drawString(2*cm, y, "Collection Amount:")
-        c.drawRightString(width - 2*cm, y, f"{amount:.2f} EUR")
+        c.drawString(2*cm, y, "Ποσό Είσπραξης:")
+        c.drawRightString(width - 2*cm, y, f"{amount:.2f} €")
 
         # Transaction Notes (from database)
         if notes:
             y -= 1.5*cm
             c.setFont(self.greek_font_bold, 11)
-            c.drawString(2*cm, y, "Transaction Notes:")
+            c.drawString(2*cm, y, "Παρατηρήσεις:")
             y -= 0.6*cm
             c.setFont(self.greek_font, 10)
             notes_lines = self._wrap_text(notes, max_width, c, self.greek_font, 10)
@@ -338,7 +338,7 @@ class ReceiptGenerator:
         # Left signature (Engineer/Company)
         if self.signature_path and os.path.exists(self.signature_path):
             try:
-                c.drawImage(self.signature_path, 2*cm, sig_y, width=4*cm, height=2*cm, preserveAspectRatio=True, mask='auto')
+                c.drawImage(self.signature_path, 2*cm, sig_y, width=6*cm, height=3.5*cm, preserveAspectRatio=True, mask='auto')
             except:
                 pass
         else:
