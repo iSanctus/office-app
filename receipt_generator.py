@@ -355,7 +355,7 @@ class ReceiptGenerator:
 
         # Footer
         c.setFont(self.greek_font, 8)
-        c.drawCentredString(width/2, 1.5*cm, "Thank you for your cooperation!")
+        c.drawCentredString(width/2, 1.5*cm, "Ευχαριστούμε για τη συνεργασία!")
 
         c.save()
         return output_path
