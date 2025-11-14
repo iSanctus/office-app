@@ -279,6 +279,9 @@ class EditTransactionWindow(ctk.CTkToplevel):
             self.master_app.refresh_main_table()
         if hasattr(self.master_app, 'refresh_customer_view'):
             self.master_app.refresh_customer_view()
+        # Refresh customer profile window transactions
+        if hasattr(self.master_app, 'refresh_transactions'):
+            self.master_app.refresh_transactions()
 
         self.destroy()
 
@@ -723,18 +726,41 @@ class CustomerProfileWindow(ctk.CTkToplevel):
             messagebox.showwarning("Προσοχή", "Παρακαλώ επιλέξτε μια συναλλαγή.", parent=self)
             return
 
-        trans_id = self.trans_tree.item(selected[0])['values'][0]
-        service = self.trans_tree.item(selected[0])['values'][1]
-        date_formatted = self.trans_tree.item(selected[0])['values'][2]  # This is already in dd/mm/yy format
-        amount_str = self.trans_tree.item(selected[0])['values'][3]
-        amount = float(amount_str.replace(' €', '').replace(',', '.'))
+        try:
+            trans_id = self.trans_tree.item(selected[0])['values'][0]
+            service = self.trans_tree.item(selected[0])['values'][1]
+            date_formatted = self.trans_tree.item(selected[0])['values'][2]  # This is already in dd/mm/yyyy format
+            amount_str = self.trans_tree.item(selected[0])['values'][3]
+            amount = float(amount_str.replace(' €', '').replace(',', '.'))
 
-        # Get transaction notes from database
-        trans_details = db.get_transaction_details(trans_id)
-        trans_notes = trans_details[1] if trans_details else ""
+            # Get transaction notes from database
+            trans_details = db.get_transaction_details(trans_id)
+            trans_notes = trans_details[1] if trans_details else ""
 
-        # Show receipt options dialog
-        ReceiptOptionsWindow(self, trans_id, self.customer_name, service, amount, date, trans_notes)
+            # Show receipt options dialog
+            ReceiptOptionsWindow(self, trans_id, self.customer_name, service, amount, date_formatted, trans_notes)
+        except Exception as e:
+            messagebox.showerror("Σφάλμα", f"Αποτυχία ανοίγματος παραθύρου απόδειξης:\n{str(e)}", parent=self)
+
+    def refresh_transactions(self):
+        """Refresh the transactions list"""
+        # Clear existing items
+        for item in self.trans_tree.get_children():
+            self.trans_tree.delete(item)
+
+        # Reload transactions from database
+        records = db.get_transactions_by_customer(self.customer_name)
+
+        # Update summary
+        total_paid = sum(r[4] for r in records if r[5] == 'Πληρώθηκε')
+        total_unpaid = sum(r[4] for r in records if r[5] != 'Πληρώθηκε')
+
+        # Reload transactions into tree
+        for record in records:
+            trans_id, service, notes, date, cost, status = record
+            tag = 'paid' if status == 'Πληρώθηκε' else 'unpaid'
+            formatted_date = format_date(date)
+            self.trans_tree.insert("", "end", values=(trans_id, service, formatted_date, f"{cost:.2f} €", status), tags=(tag,))
 
 
 class ReceiptOptionsWindow(ctk.CTkToplevel):
