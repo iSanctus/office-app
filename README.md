@@ -97,7 +97,7 @@
 
 1. **Κλωνοποίηση του repository**
    ```bash
-   git clone https://github.com/yourusername/office-app.git
+   git clone https://github.com/iSanctus/office-app.git
    cd office-app
    ```
 
@@ -231,4 +231,5 @@ SHARED_PATH = r"\\YOUR-SERVER\Shared\CRM"
 ---
 
 **Φτιαγμένο με ❤️ για την ελληνική επιχειρηματική κοινότητα**
+
 
