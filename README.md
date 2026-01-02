@@ -221,8 +221,8 @@ SHARED_PATH = r"\\YOUR-SERVER\Shared\CRM"
 
 Για τεχνική υποστήριξη ή ερωτήσεις:
 
-- 🐛 Αναφορά προβλημάτων: [GitHub Issues](https://github.com/yourusername/office-app/issues)
-- 📧 Email: your.email@example.com
+- 🐛 Αναφορά προβλημάτων: [GitHub Issues](https://github.com/iSanctus/office-app/issues)
+- 📧 Email: chrismitsos94@gmail.com
 
 ## 🙏 Ευχαριστίες
 
@@ -231,3 +231,4 @@ SHARED_PATH = r"\\YOUR-SERVER\Shared\CRM"
 ---
 
 **Φτιαγμένο με ❤️ για την ελληνική επιχειρηματική κοινότητα**
+
